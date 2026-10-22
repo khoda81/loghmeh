@@ -1,0 +1,52 @@
+{
+  "app": "Loghmeh",
+  "version": "0.1.0",
+  "environment": "extension",
+  "sessionVerified": true,
+  "menuVerified": false,
+  "checks": [
+    {
+      "operation": "bootstrap",
+      "path": "/Reserves",
+      "method": "GET",
+      "status": 200,
+      "elapsedMs": 440,
+      "result": "passed",
+      "groupCount": 8
+    },
+    {
+      "operation": "restaurants",
+      "path": "/Reserves/GetRestaurantByPersonGroup",
+      "method": "POST",
+      "status": 200,
+      "elapsedMs": 34,
+      "result": "passed",
+      "restaurantCount": 3
+    },
+    {
+      "operation": "menu",
+      "path": "/Reserves/GetReservePage",
+      "method": "POST",
+      "status": 200,
+      "elapsedMs": 3065,
+      "result": "unexpected-response"
+    },
+    {
+      "operation": "restaurants",
+      "path": "/Reserves/GetRestaurantByPersonGroup",
+      "method": "POST",
+      "status": 200,
+      "elapsedMs": 23,
+      "result": "passed",
+      "restaurantCount": 1
+    },
+    {
+      "operation": "menu",
+      "path": "/Reserves/GetReservePage",
+      "method": "POST",
+      "status": 200,
+      "elapsedMs": 754,
+      "result": "unexpected-response"
+    }
+  ]
+}

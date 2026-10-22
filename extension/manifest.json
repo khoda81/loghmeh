@@ -1,0 +1,26 @@
+{
+  "manifest_version": 3,
+  "name": "Loghmeh — connection probe",
+  "version": "0.1.1",
+  "description": "Check your existing dining login and read one menu. This prototype cannot submit reservations.",
+  "host_permissions": ["https://dining2.ut.ac.ir/*"],
+  "background": {
+    "scripts": ["background.mjs"],
+    "type": "module"
+  },
+  "action": {
+    "default_title": "Open Loghmeh",
+    "default_icon": "icon.svg"
+  },
+  "icons": { "48": "icon.svg", "96": "icon.svg" },
+  "content_security_policy": {
+    "extension_pages": "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src https://dining2.ut.ac.ir; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'"
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "loghmeh@local.invalid",
+      "strict_min_version": "140.0",
+      "data_collection_permissions": { "required": ["none"] }
+    }
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "name": "loghmeh",
+  "version": "0.1.1",
+  "private": true,
+  "type": "module",
+  "description": "A Firefox-first dining client. First milestone: a read-only authenticated menu probe.",
+  "scripts": {
+    "test": "node --test tests/transport.test.mjs",
+    "check": "node scripts/check.mjs",
+    "preview": "node scripts/preview.mjs",
+    "package": "python scripts/package.py"
+  },
+  "engines": { "node": ">=22" }
+}
