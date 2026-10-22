@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Loghmeh",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Try the weekly planner with sample data, or verify your existing dining session with the read-only connection probe.",
   "host_permissions": ["https://dining2.ut.ac.ir/*"],
   "background": {

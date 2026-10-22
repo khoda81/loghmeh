@@ -1,4 +1,5 @@
-import { PlannerModel, MEALS, addDays, weekOf, tehranToday, menuKey, slotKey, balanceTicks } from './lib/planner-model.mjs';
+import { PlannerModel, MEALS, addDays, weekOf, tehranToday, menuKey, slotKey } from './lib/planner-model.mjs';
+import { SignedBalanceLedger, signedBalanceTicks } from './lib/signed-balance.mjs';
 import { DemoDiningService, RESTAURANTS } from './lib/planner-demo.mjs';
 import { PlannerController } from './lib/planner-controller.mjs';
 
@@ -35,7 +36,10 @@ const mealName = id => MEALS.find(meal => meal.id === id)?.name || id;
 const hour = Number(new Intl.DateTimeFormat('en', { hour: 'numeric', hourCycle: 'h23', timeZone: 'Asia/Tehran' }).format(new Date()));
 const currentMeal = hour < 16 ? '1' : '3'; // Sample serving windows; live times still need verification.
 const weekNodes = new Map();
-let foodContext = null;
+const ledger = new SignedBalanceLedger();
+const segmentNodes = new Map();
+const tickNodes = new Map();
+let ledgerView;
 let toastTimer;
 let lastMessage = '';
 let weekObserver;
@@ -80,7 +84,7 @@ function renderPalette() {
     button.title = status.title || restaurant.name;
     button.append(el('span', status.busy ? 'spinner' : 'color-dot'), el('span', 'pill-name', restaurant.shortName),
       el('span', `pill-status${status.error ? ' error' : ''}`, status.text));
-    button.addEventListener('click', () => { closeFood(false); controller.select(id); });
+    button.addEventListener('click', () => controller.select(id));
     token.append(button);
     if (status.error) {
       const retry = el('button', 'retry-pill', 'Retry');
@@ -115,26 +119,39 @@ function renderPalette() {
 }
 
 function renderBalance() {
-  const delta = model.delta();
-  const projected = model.balanceRials - delta;
+  ledgerView = ledger.update(model);
+  const { projectedRials: projected, spendingRials, recoveryRials, reservedRials, extentRials, zeroFraction } = ledgerView;
   $('balance-value').textContent = money(model.balanceRials);
   $('projected-value').textContent = money(projected);
   $('projected-value').style.color = projected < 0 ? 'var(--danger)' : '';
-  $('pending-label').textContent = !model.changes().length ? 'No pending changes'
-    : delta < 0 ? `${money(-delta)} toman refund pending` : `${money(delta)} toman pending`;
-  const segments = model.selectedIds.map(id => {
-    const amount = model.delta(id);
-    if (amount <= 0) return null;
-    const restaurant = model.restaurants.get(id);
-    const segment = el('div', 'balance-segment');
+  const pending = [spendingRials ? `${money(spendingRials)} spending` : '', recoveryRials ? `${money(recoveryRials)} recovery` : ''].filter(Boolean);
+  $('pending-label').textContent = pending.length ? `${pending.join(' · ')} pending`
+    : model.changes().length ? 'Change queued behind a saving meal' : 'No pending changes';
+  $('reserved-total').textContent = `${money(reservedRials)} reserved`;
+  const keep = new Set();
+  for (const entry of ledgerView.segments) {
+    const { choice, state, startRials, endRials, lane } = entry;
+    keep.add(choice.id);
+    const restaurant = model.restaurants.get(choice.restaurantId);
+    let segment = segmentNodes.get(choice.id);
+    if (!segment) {
+      segment = el('div');
+      segment.dataset.ledgerId = choice.id;
+      segmentNodes.set(choice.id, segment);
+      $('balance-segments').append(segment);
+    }
+    segment.className = `balance-segment ${state} lane-${lane}`;
     segment.style.setProperty('--restaurant-color', restaurant.color);
-    segment.style.width = `${Math.min(100, amount / Math.max(model.balanceRials, 1) * 100)}%`;
-    segment.title = `${restaurant.shortName} · ${money(amount)} toman pending`;
-    return segment;
-  }).filter(Boolean);
-  $('balance-segments').replaceChildren(...segments);
+    segment.style.left = `${startRials / extentRials * 100}%`;
+    segment.style.width = `${(endRials - startRials) / extentRials * 100}%`;
+    const status = state === 'adding' ? 'Pending food' : state === 'removing' ? 'Pending refund' : 'Reserved';
+    segment.title = `${restaurant.shortName} · ${choice.name} · ${money(choice.priceRials)} toman · ${status}`;
+  }
+  for (const [id, node] of segmentNodes) if (!keep.has(id)) { node.remove(); segmentNodes.delete(id); }
+  $('balance-zero').style.left = `${zeroFraction * 100}%`;
+  $('balance-cash').style.left = `${zeroFraction * 100}%`;
   $('balance-track').classList.toggle('over-budget', projected < 0);
-  $('balance-track').setAttribute('aria-label', `Balance ${money(model.balanceRials)} toman. Pending ${money(delta)}. Projected ${money(projected)}.`);
+  $('balance-track').setAttribute('aria-label', `Known reservations minus ${money(reservedRials)} toman. Available balance ${money(model.balanceRials)}. Pending spending ${money(spendingRials)}, recovery ${money(recoveryRials)}. After saving ${money(projected)}.`);
   renderTicks();
   const busy = controller.saveJobs.has(model.activeId);
   const count = model.changes(model.activeId).length;
@@ -147,12 +164,22 @@ function renderBalance() {
 }
 
 function renderTicks() {
+  if (!ledgerView) return;
   const width = $('balance-track').clientWidth;
-  $('balance-ticks').replaceChildren(...balanceTicks(model.balanceRials, width).map(tick => {
-    const label = el('span', '', tick.value >= 1000 ? `${tick.value / 1000}k` : String(tick.value));
+  const keep = new Set();
+  for (const tick of signedBalanceTicks(ledgerView, width)) {
+    keep.add(tick.value);
+    let label = tickNodes.get(tick.value);
+    if (!label) {
+      const absolute = Math.abs(tick.value);
+      label = el('span', tick.value === 0 ? 'zero-tick' : '', `${tick.value < 0 ? '−' : ''}${absolute >= 1000 ? `${absolute / 1000}k` : absolute}`);
+      label.dataset.tickValue = tick.value;
+      tickNodes.set(tick.value, label);
+      $('balance-ticks').append(label);
+    }
     label.style.left = `${tick.fraction * 100}%`;
-    return label;
-  }));
+  }
+  for (const [value, node] of tickNodes) if (!keep.has(value)) { node.remove(); tickNodes.delete(value); }
 }
 
 function createWeek(week, prepend = false) {
@@ -219,14 +246,9 @@ function card(choice, removing = false) {
     });
     top.append(remove);
   }
-  const food = el('button', 'food-name', choice.name);
+  const food = el('span', 'food-name', choice.name);
   food.dir = 'rtl';
   food.title = choice.name;
-  food.addEventListener('click', () => {
-    if (!model.selectedIds.includes(choice.restaurantId)) controller.add(choice.restaurantId);
-    else controller.select(choice.restaurantId);
-    openFood(choice.date, choice.mealId, choice.week);
-  });
   const bottom = el('div', 'food-card-bottom');
   const state = failed ? 'Not saved' : saving ? 'Saving…' : removing ? 'Cancel pending' : draft ? 'Draft' : choice.locked ? 'Reserved · Locked' : 'Reserved';
   bottom.append(el('span', '', `${money(choice.priceRials)} t`), el('span', draft ? 'draft-state' : '', state));
@@ -234,7 +256,30 @@ function card(choice, removing = false) {
   return node;
 }
 
+function ghostOption(choice, selected) {
+  const row = el('div', `ghost-option${selected ? ' is-selected' : ''}`);
+  const button = el('button', 'ghost-choice');
+  button.dataset.ghostId = choice.id;
+  button.dataset.focusKey = `ghost-${choice.id}`;
+  button.setAttribute('aria-pressed', String(selected));
+  button.setAttribute('aria-label', `${choice.name} · ${money(choice.priceRials)} toman · ${selected ? 'Selected' : 'Choose'}`);
+  const name = el('span', 'ghost-name', choice.name);
+  name.dir = 'rtl';
+  button.append(name, el('span', 'ghost-meta', `${money(choice.priceRials)} t${selected ? ' · Selected' : ''}`));
+  button.addEventListener('click', () => controller.choose(choice));
+  row.append(button);
+  if (selected) {
+    const remove = el('button', 'ghost-remove', '×');
+    remove.dataset.focusKey = `ghost-remove-${choice.id}`;
+    remove.setAttribute('aria-label', `Remove ${choice.name}`);
+    remove.addEventListener('click', () => controller.removeChoice(choice));
+    row.append(remove);
+  }
+  return row;
+}
+
 function renderSlots() {
+  const focused = document.activeElement?.dataset.focusKey;
   const bookings = model.bookings();
   const cancellations = model.changes().filter(draft => !draft.desired && model.confirmed.has(draft.choice.id)).map(draft => draft.choice);
   const conflictSlots = new Set(model.conflicts().flatMap(choices => choices.map(slotKey)));
@@ -246,31 +291,38 @@ function renderSlots() {
     const load = model.loads.get(menuKey(model.activeId, week));
     const foods = menu?.choices.filter(choice => choice.date === date && choice.mealId === mealId) || [];
     const unlocked = foods.filter(choice => !choice.locked);
-    const chosenHere = items.some(choice => choice.restaurantId === model.activeId);
-    const cards = el('div', 'slot-cards');
-    cards.append(...items.map(choice => card(choice)), ...cancelling.map(choice => card(choice, true)));
-    const add = el('button', 'slot-add');
-    add.dataset.date = date;
-    add.dataset.meal = mealId;
-    add.setAttribute('aria-label', `${chosenHere ? 'Change' : 'Paint'} ${date} ${mealName(mealId)} at ${model.restaurants.get(model.activeId).shortName}`);
-    if (load?.state === 'error') {
-      add.textContent = 'Retry menu';
-      add.addEventListener('click', () => controller.load(model.activeId, week, true));
-    } else if (!menu) {
-      add.classList.add('is-loading');
-      add.append(el('span', 'spinner'), el('span', '', 'Loading menu'));
-      add.disabled = true;
-    } else if (!unlocked.length) {
-      add.textContent = foods.length ? 'Reservation closed' : menu.published ? 'No food offered' : week < currentWeek ? 'Menu unavailable' : 'Not published yet';
-      add.disabled = true;
+    const others = el('div', 'slot-cards');
+    others.append(...items.filter(choice => choice.restaurantId !== model.activeId).map(choice => card(choice)),
+      ...cancelling.filter(choice => choice.restaurantId !== model.activeId).map(choice => card(choice, true)));
+    const surface = el('div', `paint-surface${unlocked.length ? ' can-paint' : ''}`);
+    const active = el('div', 'active-bookings slot-cards');
+    active.append(...items.filter(choice => choice.restaurantId === model.activeId).map(choice => card(choice)),
+      ...cancelling.filter(choice => choice.restaurantId === model.activeId).map(choice => card(choice, true)));
+    surface.append(active);
+    if (unlocked.length) {
+      const ghosts = el('div', 'ghost-options');
+      ghosts.setAttribute('role', 'group');
+      ghosts.setAttribute('aria-label', `${date} ${mealName(mealId)} · ${model.restaurants.get(model.activeId).shortName}`);
+      ghosts.append(...unlocked.map(choice => ghostOption(choice, items.some(item => item.id === choice.id))));
+      surface.append(ghosts);
     } else {
-      add.append(el('span', 'plus', chosenHere ? '↻' : '+'), el('span', '', chosenHere ? 'Change food' : items.length ? 'Add another' : 'Pick a meal'));
-      add.addEventListener('click', () => unlocked.length === 1 && !chosenHere ? controller.choose(unlocked[0]) : openFood(date, mealId, week));
+      const state = el(load?.state === 'error' ? 'button' : 'span', 'slot-state');
+      if (load?.state === 'error') {
+        state.textContent = 'Retry menu';
+        state.addEventListener('click', () => controller.load(model.activeId, week, true));
+      } else if (!menu) {
+        state.append(el('span', 'spinner'), el('span', '', 'Loading menu'));
+      } else state.textContent = foods.length ? 'Reservation closed' : menu.published ? 'No food offered'
+        : week < currentWeek ? 'Menu unavailable' : 'Not published yet';
+      surface.append(state);
     }
     cell.classList.toggle('has-conflict', conflictSlots.has(key));
-    cell.replaceChildren(cards);
+    cell.replaceChildren(others, surface);
     if (conflictSlots.has(key)) cell.append(el('p', 'slot-conflict', 'Meal entitlement conflict'));
-    cell.append(add);
+  }
+  if (focused?.startsWith('ghost-')) {
+    const target = [...document.querySelectorAll('[data-focus-key]')].find(node => node.dataset.focusKey === focused);
+    target?.focus({ preventScroll: true });
   }
 }
 
@@ -303,7 +355,6 @@ function render() {
   renderSlots();
   renderToday();
   renderCoverage();
-  renderFood();
   const issue = model.issueFor(model.activeId);
   $('planner-warning').hidden = !issue;
   $('planner-warning').textContent = issue || '';
@@ -317,49 +368,6 @@ function render() {
     toastTimer = setTimeout(() => { $('toast').hidden = true; }, 6000);
   }
   persist();
-}
-
-function openFood(date, mealId, week) {
-  foodContext = { date, mealId, week, restaurantId: model.activeId };
-  $('food-panel').hidden = false;
-  $('food-panel').dataset.signature = '';
-  renderFood();
-  $('close-food').focus({ preventScroll: true });
-}
-
-function closeFood(restoreFocus = true) {
-  const context = foodContext;
-  foodContext = null;
-  $('food-panel').hidden = true;
-  if (context && restoreFocus) document.querySelector(`[data-slot="${context.date}|${context.mealId}"] .slot-add`)?.focus({ preventScroll: true });
-}
-
-function renderFood() {
-  if (!foodContext) return;
-  const { date, mealId, week, restaurantId } = foodContext;
-  const restaurant = model.restaurants.get(restaurantId);
-  const choices = model.menus.get(menuKey(restaurantId, week))?.choices.filter(choice => choice.date === date && choice.mealId === mealId) || [];
-  const booked = new Set(model.bookings().map(choice => choice.id));
-  const signature = JSON.stringify([foodContext, choices, [...booked]]);
-  if ($('food-panel').dataset.signature === signature) return;
-  $('food-panel').dataset.signature = signature;
-  $('food-place').textContent = restaurant.name;
-  $('food-place').dir = 'auto';
-  $('food-title').textContent = `${fullWeekday.format(asDate(date))} ${mealName(mealId).toLowerCase()}`;
-  $('food-date').textContent = faDate.format(asDate(date));
-  $('food-options').replaceChildren(...choices.map(choice => {
-    const button = el('button', `food-option${booked.has(choice.id) ? ' chosen' : ''}`);
-    button.style.setProperty('--restaurant-color', restaurant.color);
-    button.disabled = choice.locked;
-    button.append(el('span', 'food-option-name', choice.name));
-    button.firstChild.dir = 'rtl';
-    const meta = el('span', 'food-option-meta');
-    meta.append(el('span', '', `${money(choice.priceRials)} toman`), el('span', '', choice.locked ? 'Locked' : booked.has(choice.id) ? 'Selected' : 'Choose'));
-    button.append(meta);
-    button.addEventListener('click', () => { if (controller.choose(choice)) closeFood(); });
-    return button;
-  }));
-  if (!choices.length) $('food-options').append(el('p', 'food-empty', 'There is no food offered for this slot.'));
 }
 
 function renderPlacePicker() {
@@ -424,15 +432,13 @@ for (const dialog of [$('place-picker'), $('simulation')]) dialog.addEventListen
 
 $('submit').addEventListener('click', () => controller.submit());
 $('undo-changes').addEventListener('click', () => { model.discard(model.activeId); controller.changed(); });
-$('close-food').addEventListener('click', () => closeFood());
-document.addEventListener('keydown', event => { if (event.key === 'Escape' && foodContext) { closeFood(); event.preventDefault(); } });
-$('add-place').addEventListener('click', () => { closeFood(false); renderPlacePicker(); showDialog($('place-picker')); $('place-search').focus({ preventScroll: true }); });
+$('add-place').addEventListener('click', () => { renderPlacePicker(); showDialog($('place-picker')); $('place-search').focus({ preventScroll: true }); });
 $('close-places').addEventListener('click', () => $('place-picker').close());
 $('done-places').addEventListener('click', () => $('place-picker').close());
 $('place-search').addEventListener('input', renderPlacePicker);
-$('jump-current').addEventListener('click', () => { closeFood(false); jumpTo(currentWeek); });
-$('jump-next').addEventListener('click', () => { closeFood(false); jumpTo(nextWeek); });
-$('open-simulation').addEventListener('click', () => { closeFood(false); showDialog($('simulation')); });
+$('jump-current').addEventListener('click', () => { jumpTo(currentWeek); });
+$('jump-next').addEventListener('click', () => { jumpTo(nextWeek); });
+$('open-simulation').addEventListener('click', () => { showDialog($('simulation')); });
 $('close-simulation').addEventListener('click', () => $('simulation').close());
 $('request-speed').addEventListener('change', event => { service.delayMs = Number(event.target.value); });
 $('fail-save').addEventListener('change', event => { service.failNextSave = event.target.checked; });

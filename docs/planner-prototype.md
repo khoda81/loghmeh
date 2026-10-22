@@ -1,6 +1,6 @@
 # Weekly restaurant-painting prototype
 
-Version 0.2.0, 2026-10-22. This surface uses fictional data throughout.
+Version 0.3.0, 2026-10-22. This surface uses fictional data throughout.
 The existing read-only probe is still the only university networking client.
 
 ## Interaction
@@ -16,19 +16,33 @@ immediately. Explicit submission handles the active restaurant. A pill's own
 state reports queued/loading reads, pending changes, queued/saving writes,
 confirmed success, or an error with retry. Reads arrive incrementally.
 
-Single-food slots paint immediately. Two-food slots open a chooser. Confirmed
-reservations and drafts can stack across restaurants. The sample policy uses
+Hovering a slot reveals ghost foods for the active restaurant. Clicking a food
+paints it directly; choosing another replaces that restaurant's food in the slot.
+There is no separate food picker or change-food button. Keyboard focus reveals
+the same choices and survives asynchronous renders. Touch devices show the
+choices inline. Confirmed reservations and drafts can stack across restaurants. The sample policy uses
 one student meal and one supplementary entitlement per slot; this is fictional
 and must be replaced with parsed account policies before any real write.
 The current meal highlight also uses sample time windows, not verified dining
 service hours.
 
 Balance is stored in integer rials and displayed in explicitly labeled toman.
-Already-paid bookings are not subtracted again. Pending spending is segmented
-by restaurant. The bar's scale stays fixed while editing and rebases only when
-the simulated server confirms a new balance. Round 1/2/5-series ticks maintain
-at least 72px between labels. The sample service models full-price refunds;
-actual refund behavior remains unverified.
+Known paid reservations occupy the negative side; zero to the available balance
+is empty. Already-paid bookings are not charged again. Opposite hatch directions
+identify pending purchases and refunds. Swaps expose both gross amounts, using
+two lanes when they overlap, rather than hiding an equal-price change in a net
+zero. Failed saves retain their hatching.
+
+Food rectangles use fixed funding coordinates, with an extent of available
+balance plus known paid reservations. Normal purchases/refunds preserve that
+extent. A cached layout keeps surviving rectangles at exactly the same position,
+width, and lane on confirmation, while zero and the round ruler move. New intent
+may repack the rectangles; discovering previously unknown reservations may
+expand the known extent. Additions follow save order and removals reverse it,
+including weekly batches, so partial confirmations keep paid food below zero.
+Overspending keeps the scale and marks the right edge red. Round 1/2/5-series
+ticks maintain at least 72px between labels. The sample service models full-price
+refunds; actual refund behavior remains unverified.
 
 ## State and request ownership
 
@@ -38,8 +52,11 @@ actual refund behavior remains unverified.
   active restaurant reads before other restaurants, and per-restaurant status.
 - `planner-demo.mjs`: deterministic sample menus, artificial latency, a local
   balance and booking ledger, and optional one-shot failures. No network API.
-- `planner.mjs`: DOM rendering, infinite-scroll observation, local demo state
-  persistence, the picker, and the food chooser.
+- `signed-balance.mjs`: fixed food geometry, pending spending/recovery lanes,
+  and the signed ruler. Model intent and commit revisions distinguish edits
+  from confirmations, including newer edits to captured writes.
+- `planner.mjs`: DOM rendering, inline ghost choices, infinite-scroll observation,
+  local demo persistence, and the nested restaurant picker.
 
 Only selected places and relevant weeks are requested. Leaving a week cancels
 queued reads for it; running reads complete. The current week remains queued
@@ -56,8 +73,9 @@ origin-local storage under a dated, versioned demo key.
 
 ## Verification
 
-All 18 Node tests pass (11 planner tests and seven existing transport tests),
-and all 14 existing browser parser checks pass. Node checks cover date boundaries, tick spacing, unchanged booking costs,
+All 29 Node tests pass (11 planner, 11 signed-ledger, and seven transport).
+The existing browser parser suite has 14 checks. Node checks cover date boundaries,
+signed tick spacing, unchanged booking costs,
 refresh preservation, submission on restaurant switch, rejection and retry,
 edits during writes, request serialization, cancellation of offscreen queued
 reads, entitlement and budget conflicts, wrong-week responses, current-week
@@ -65,7 +83,7 @@ background scanning, partial success across weeks, and local state recovery.
 The existing transport tests and browser parser suite remain applicable to
 the separate read-only probe.
 
-The in-app browser was used to verify painting a two-choice meal, stacking
+The in-app browser was used in 0.2.0 to verify painting a two-choice meal, stacking
 restaurants with separate sample entitlements, automatic submission on a pill
 change, a forced rejection preserving the draft and balance, explicit retry,
 adding a fourth restaurant through nested group search, per-restaurant loading,
@@ -76,6 +94,20 @@ iframe viewport verified the narrow layout and horizontal week scrolling.
 Native pointer opening/closing of simulation controls preserved calendar scroll.
 The local app preview also runs with `style-src 'self'` and `connect-src 'none'`;
 restaurant colors and the budget segments work under those restrictions.
+
+
+The 0.3.0 browser check verified hover-revealed two-food choices and direct
+replacement without a menu, keyboard focus and Enter selection, direct removal,
+and separate purchase/refund hatches. A simulated 36,000-toman purchase moved zero
+88.8125px with zero movement or width change across all ten food rectangles.
+A 35,000-to-25,000-toman replacement moved zero -24.67499px; all surviving
+rectangles retained their horizontal and vertical geometry. These pixel values
+apply to the tested viewport. The screenshot in `outputs/inline-ledger-0.3.0.jpg`
+captures the inline choices and both pending hatch lanes.
+A forced refund rejection retained its pending amount and hatch; Undo cleared
+both. The 390px iframe check confirmed the signed ruler and restaurant palette
+still fit, with horizontal scrolling confined to the palette and weekly grid.
+This checks narrow layout, not a physical touch device or the target Zen browser.
 
 ## Before connecting real reservations
 

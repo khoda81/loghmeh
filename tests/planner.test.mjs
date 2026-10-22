@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { PlannerModel, balanceTicks, addDays, weekOf, tehranToday, menuKey } from '../extension/lib/planner-model.mjs';
+import { PlannerModel, addDays, weekOf, tehranToday, menuKey } from '../extension/lib/planner-model.mjs';
 import { RESTAURANTS, DemoDiningService } from '../extension/lib/planner-demo.mjs';
 import { PlannerController } from '../extension/lib/planner-controller.mjs';
 
@@ -21,17 +21,11 @@ function choice(context, restaurantId = 'kooy', day = 1, targetWeek = week) {
   return context.model.menus.get(menuKey(restaurantId, targetWeek)).choices.find(item => item.date === addDays(targetWeek, day) && item.mealId === '1');
 }
 
-test('calendar uses Tehran dates, Saturday weeks, and round ticks with a minimum distance', () => {
+test('calendar uses Tehran dates and Saturday weeks', () => {
   assert.equal(tehranToday(new Date('2026-10-23T21:00:00Z')), '2026-10-24');
   assert.equal(weekOf('2026-10-23'), '2026-10-17');
   assert.equal(weekOf('2026-10-24'), '2026-10-24');
   assert.equal(addDays('2026-10-31', 1), '2026-11-01');
-  for (const width of [260, 400, 900]) {
-    const ticks = balanceTicks(4_200_000, width);
-    assert.ok(ticks.every(tick => tick.value % 10_000 === 0 && tick.fraction <= 1));
-    for (let i = 1; i < ticks.length; i++) assert.ok((ticks[i].fraction - ticks[i - 1].fraction) * width >= 72);
-  }
-  assert.deepEqual(balanceTicks(0, 400), []);
 });
 
 test('existing reservations are not charged twice; refreshing a menu preserves the draft', async () => {

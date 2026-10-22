@@ -9,17 +9,6 @@ export function tehranToday(now = new Date()) {
   return ['year', 'month', 'day'].map(type => parts.find(part => part.type === type).value).join('-');
 }
 
-export function balanceTicks(balanceRials, width, minimumGap = 72) {
-  const balance = balanceRials / 10;
-  if (balance <= 0) return [];
-  const target = balance / Math.max(1, Math.floor(width / minimumGap));
-  const magnitude = 10 ** Math.floor(Math.log10(target));
-  const step = [1, 2, 5, 10].find(value => value * magnitude >= target) * magnitude;
-  const ticks = [];
-  for (let value = 0; value <= balance; value += step) ticks.push({ value, fraction: value / balance });
-  return ticks;
-}
-
 // Confirmed bookings, local intent, and captured writes have separate ownership.
 export class PlannerModel {
   constructor({ restaurants, balanceRials, selectedIds, activeId, drafts = [], menus = [] }) {
@@ -31,9 +20,11 @@ export class PlannerModel {
     this.confirmed = new Map();
     this.drafts = new Map();
     this.inflight = new Map();
+    this.inflightDrafts = new Map();
     this.loads = new Map();
     this.saves = new Map();
     this.revision = 0;
+    this.commitRevision = 0;
     for (const menu of menus) this.receiveMenu(menu);
     for (const draft of drafts) {
       if (this.restaurants.has(draft.choice?.restaurantId) && typeof draft.desired === 'boolean'
@@ -71,7 +62,9 @@ export class PlannerModel {
 
   setDesired(choice, desired) {
     if (choice.locked) throw new Error(choice.lockReason || 'This reservation is locked.');
-    if (this.confirmed.has(choice.id) === desired && !this.inflight.has(choice.id)) this.drafts.delete(choice.id);
+    if (this.confirmed.has(choice.id) === desired && !this.inflight.has(choice.id)) {
+      if (this.drafts.delete(choice.id)) this.revision++;
+    }
     else this.drafts.set(choice.id, { choice, desired, revision: ++this.revision });
     if (this.saves.get(choice.restaurantId)?.state === 'error') this.saves.delete(choice.restaurantId);
   }
@@ -87,7 +80,9 @@ export class PlannerModel {
 
   discard(restaurantId) {
     if (this.changes(restaurantId).some(draft => this.inflight.has(draft.choice.id))) return false;
-    for (const draft of this.changes(restaurantId)) this.drafts.delete(draft.choice.id);
+    const changes = this.changes(restaurantId);
+    for (const draft of changes) this.drafts.delete(draft.choice.id);
+    if (changes.length) this.revision++;
     this.saves.delete(restaurantId);
     return true;
   }
@@ -114,19 +109,26 @@ export class PlannerModel {
 
   capture(restaurantId) {
     const changes = this.changes(restaurantId).map(draft => ({ ...draft }));
-    for (const draft of changes) this.inflight.set(draft.choice.id, draft.revision);
+    for (const draft of changes) {
+      this.inflight.set(draft.choice.id, draft.revision);
+      this.inflightDrafts.set(draft.choice.id, draft);
+    }
     return changes;
   }
 
   commit(changes, balanceRials) {
     this.balanceRials = balanceRials;
+    this.commitRevision++;
     for (const submitted of changes) {
       const { choice, desired, revision } = submitted;
       if (desired) this.confirmed.set(choice.id, choice);
       else this.confirmed.delete(choice.id);
       const menu = this.menus.get(menuKey(choice.restaurantId, choice.week));
       if (menu) menu.reservedIds = [...new Set([...menu.reservedIds.filter(id => id !== choice.id), ...(desired ? [choice.id] : [])])];
-      if (this.inflight.get(choice.id) === revision) this.inflight.delete(choice.id);
+      if (this.inflight.get(choice.id) === revision) {
+        this.inflight.delete(choice.id);
+        this.inflightDrafts.delete(choice.id);
+      }
       const current = this.drafts.get(choice.id);
       if (current && (current.revision === revision || current.desired === desired)) this.drafts.delete(choice.id);
     }
@@ -134,7 +136,10 @@ export class PlannerModel {
 
   release(changes) {
     for (const submitted of changes) {
-      if (this.inflight.get(submitted.choice.id) === submitted.revision) this.inflight.delete(submitted.choice.id);
+      if (this.inflight.get(submitted.choice.id) === submitted.revision) {
+        this.inflight.delete(submitted.choice.id);
+        this.inflightDrafts.delete(submitted.choice.id);
+      }
       const current = this.drafts.get(submitted.choice.id);
       if (current && current.desired === this.confirmed.has(submitted.choice.id)) this.drafts.delete(submitted.choice.id);
     }

@@ -20,15 +20,16 @@
         <div class="wallet-projection"><span id="pending-label">No pending changes</span><span>After saving <strong id="projected-value">—</strong></span></div>
         <div class="wallet-actions"><button id="undo-changes" class="undo-button" hidden>Undo changes</button><button id="submit" class="submit-button" disabled>All saved</button></div>
       </div>
-      <div class="balance-track" id="balance-track" role="img" aria-label="Available balance"><div id="balance-segments" class="balance-segments"></div></div>
+      <div class="balance-track" id="balance-track" role="img" aria-label="Balance and reservations"><div id="balance-cash" class="balance-cash"></div><div id="balance-segments" class="balance-segments"></div><div id="balance-zero" class="balance-zero"></div></div>
       <div id="balance-ticks" class="balance-ticks" aria-hidden="true"></div>
+      <div class="balance-key"><span><i class="ledger-swatch reserved"></i><span id="reserved-total">Known reservations</span></span><span><i class="ledger-swatch adding"></i>Pending food</span><span><i class="ledger-swatch removing"></i>Pending refund</span><span class="cash-key">0 → balance · available</span></div>
     </div>
     <div class="palette-row">
       <div id="palette" class="palette" role="group" aria-label="Restaurant colors"></div>
       <button id="add-place" class="add-place" aria-haspopup="dialog" aria-label="Add a restaurant"><span aria-hidden="true">+</span><span class="add-place-label">Add a restaurant</span></button>
     </div>
     <div class="calendar-toolbar">
-      <p class="brush-hint"><span id="brush-dot" class="color-dot"></span><span id="brush-name" dir="auto"></span><span class="muted">is your brush. Pick a meal below.</span></p>
+      <p class="brush-hint"><span id="brush-dot" class="color-dot"></span><span id="brush-name" dir="auto"></span><span class="muted">is your brush. Hover a slot, then click a food.</span></p>
       <nav aria-label="Jump to week"><button id="jump-current">This week</button><button id="jump-next" class="is-current">Next week</button></nav>
     </div>
     <div class="today-strip"><span class="today-label" id="today-label">Today</span><div id="today-reservations">Finding today’s meals…</div><span class="autosave-hint">Saves when you change restaurant</span></div>
@@ -42,11 +43,6 @@
     <div id="future-sentinel" class="scroll-sentinel" aria-hidden="true"></div>
     <footer class="calendar-footer"><span>Keep scrolling for more weeks.</span><span>Sample menus · Your university reservations are untouched.</span></footer>
   </main>
-
-  <aside id="food-panel" class="food-panel" role="dialog" aria-modal="false" aria-labelledby="food-title" hidden>
-    <div class="panel-heading"><div><p class="eyebrow" id="food-place"></p><h2 id="food-title">Pick your food</h2></div><button id="close-food" class="icon-button" aria-label="Close food picker">×</button></div>
-    <p class="food-date" id="food-date"></p><div id="food-options" class="food-options"></div>
-  </aside>
 
   <dialog id="place-picker" aria-labelledby="place-title">
     <div class="panel-heading"><div><p class="eyebrow">Build your palette</p><h2 id="place-title">Your usual places.</h2></div><button id="close-places" class="icon-button" aria-label="Close restaurant picker">×</button></div>

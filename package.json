@@ -1,6 +1,6 @@
 {
   "name": "loghmeh",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "type": "module",
   "description": "A Firefox-first dining client with a simulated weekly planner and an authenticated read-only probe.",

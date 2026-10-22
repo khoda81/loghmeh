@@ -3,7 +3,7 @@
 Date: 2026-10-22, Asia/Tehran. Authenticated probe version: 0.1.1.
 
 This file records the authenticated probe milestone in 0.1.1. The package is
-now 0.2.0 with a separate [simulated weekly planner](planner-prototype.md);
+now 0.3.0 with a separate [simulated weekly planner](planner-prototype.md);
 the new UI has not submitted any university reservations.
 
 ## Completed

@@ -1,7 +1,7 @@
 # Loghmeh · لقمه
 
 A Firefox / Zen dining client with a weekly planner prototype and a verified
-read-only dining connection probe. Current package: **0.2.0**.
+read-only dining connection probe. Current package: **0.3.0**.
 
 ## Try the weekly planner
 
@@ -13,13 +13,15 @@ also opens the planner after reloading the temporary add-on.
   alongside Gregorian dates; today is calculated in Asia/Tehran.
 - Pick restaurants from a searchable nested list. Your chosen places become
   persistent color pills with individual loading, saving, and error states.
-- Select a pill to choose a brush, then click a meal slot. A single available
-  food paints immediately; multiple foods open a chooser. Different restaurant
-  reservations can share a slot when their sample entitlements allow it.
+- Select a pill to choose a brush. Hover a slot to preview its foods, then
+  click the food directly. Keyboard focus reveals the same choices; touch
+  devices show them inline. Different restaurant reservations can share a
+  slot when their sample entitlements allow it.
 - Changing restaurants submits the outgoing restaurant's draft. **Submit**
   saves the active restaurant; **Undo changes** restores its confirmed state.
-- Pending spending fills the balance bar in restaurant colors. Round ticks
-  maintain their spacing; successful saves rebase the bar to the new balance.
+- Known paid meals occupy the negative side of a signed balance bar. Pending
+  purchases and refunds use opposite hatching, with separate lanes for swaps.
+  On confirmation, the round ruler moves while surviving food blocks stay put.
 - **Interactive demo** opens speed and failure controls. Failed saves retain
   the draft, offer retry, and do not reset the balance preview.
 
@@ -105,7 +107,7 @@ on-screen notice and exported report.
 npm run package
 ```
 
-This writes `dist/loghmeh-0.2.0.zip`, also loadable as a temporary
+This writes `dist/loghmeh-0.3.0.zip`, also loadable as a temporary
 add-on. The Firefox manifest uses an event background script; a future Chrome
 package can share the UI and transport with a different background manifest.
 
