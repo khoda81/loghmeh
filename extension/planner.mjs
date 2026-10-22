@@ -322,7 +322,7 @@ function renderSlots() {
         state.addEventListener('click', () => controller.load(model.activeId, week, true));
       } else if (!menu) {
         state.append(el('span', 'spinner'), el('span', '', 'Loading menu'));
-      } else state.textContent = foods.length ? 'Reservation closed' : menu.published ? 'No food offered'
+      } else state.textContent = foods.length ? 'Reservation closed' : menu.published === null ? 'No food returned' : menu.published ? 'No food offered'
         : week < currentWeek ? 'Menu unavailable' : 'Not published yet';
       surface.append(state);
     }

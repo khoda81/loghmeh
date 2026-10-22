@@ -65,7 +65,7 @@ Version 0.4.1 adds automatic recovery of a lost background connection handle.
 The real change was made by the user in Zen. No disposable reservation was
 created by the implementation tests.
 
-There are 46 passing Node tests and 19 passing browser parser checks. The
+There are 46 passing Node tests and 20 passing browser parser checks. The
 write serializer and reconciliation logic are tested with fictional HTTP
 responses; one live change is verified. General refund behavior and batch
 atomicity remain unverified. See

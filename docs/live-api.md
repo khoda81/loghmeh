@@ -34,7 +34,8 @@ visible weeks take precedence over the current-week background scan.
 A menu read starts by asking for the session's selected week. If already at
 the target it does not advance again. Large cursor distances reset to current
 week before bounded navigation; a request never walks more than eight weeks.
-The calendar can scroll further, but those loads return a range error.
+The calendar can scroll further, but those loads return a range error. Empty
+responses do not prove a publication status, so live slots say "No food returned".
 
 The original website and other clients do not participate in this queue.
 Use one reservation interface at a time. Encoded records retain their exact
@@ -102,7 +103,7 @@ account identifiers, wallet identifiers, and raw server HTML.
   serialization, cursor validation, business rejection, lost-response
   reconciliation, partial success, changed accounts/prices/quantities, and
   the existing planner and signed ledger behavior.
-- 19 browser parser checks pass against fictional fixtures.
+- 20 browser parser checks pass against fictional fixtures.
 - On 2026-10-22 the renewed authenticated dining page was used to load current
   and next-week menus. The new parser recognized the account, one wallet, a
   readable balance, and both real weeks: 22 unique foods each, four existing
@@ -114,7 +115,7 @@ The user verified the new 0.4.0 planner in Zen and supplied a sanitized
 [report](verification/zen-planner-2026-10-22.json): login expiration was recognized,
 reconnection discovered 46 restaurants in 1946ms, current-week reading took
 3201ms, and next-week reading took 7892ms with four reserved foods and four
-locked foods. An unpublished following week correctly contained no foods.
+locked foods. The following week correctly contained no foods.
 The report records session/menu verification, with write verification false.
 The user subsequently made one intended real change in Zen. The
 [write report](verification/zen-write-2026-10-22.json) records an attempted save

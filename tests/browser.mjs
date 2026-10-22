@@ -91,5 +91,10 @@ check('Unsupported extras and multiple portions are visible but cannot be change
   const portions = parseLiveMenu(menuFixture.replaceAll('data-precount="1"', 'data-precount="2"'), { id: '10:20', restId: '20' });
   assert(portions.choices[1].priceRials === 500000 && portions.choices[1].locked);
 });
+check('An empty live menu does not invent a publication status', () => {
+  const empty = menuFixture.slice(0, menuFixture.indexOf('</div>') + 6);
+  const menu = parseLiveMenu(empty, { id: '10:20', restId: '20' });
+  assert(menu.choices.length === 0 && menu.published === null);
+});
 document.getElementById('summary').textContent = `${checks - failures}/${checks} checks passed${failures ? `; ${failures} failed` : ''}.`;
 document.documentElement.dataset.testsPassed = failures ? 'false' : 'true';

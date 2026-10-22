@@ -89,5 +89,5 @@ export function parseLiveMenu(html, restaurant) {
   const balanceText = doc.querySelector('#reserveCredit')?.textContent;
   const balanceRials = number(balanceText);
   return { restaurantId: restaurant.id, week, choices, dates, reservedIds: choices.filter(choice => choice.reserved).map(choice => choice.id),
-    published: choices.length > 0, balanceRials, rawChoiceCount: parsed.rawChoiceCount };
+    published: choices.length ? true : null, balanceRials, rawChoiceCount: parsed.rawChoiceCount };
 }
