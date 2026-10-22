@@ -20,5 +20,6 @@ assert.deepEqual(manifest.host_permissions, ['https://dining2.ut.ac.ir/*']);
 assert.equal(manifest.permissions, undefined);
 assert.equal(manifest.background.type, 'module');
 assert.deepEqual(manifest.background.scripts, ['background.mjs']);
-for (const file of ['background.mjs', 'probe.html', 'probe.mjs', 'probe.css', 'icon.svg']) await readFile(`extension/${file}`);
+for (const file of ['background.mjs', 'probe.html', 'probe.mjs', 'probe.css', 'planner.html', 'planner.mjs', 'planner.css', 'icon.svg']) await readFile(`extension/${file}`);
+assert.equal(JSON.parse(await readFile('package.json', 'utf8')).version, manifest.version);
 console.log('Syntax and Firefox manifest checks passed. One host; no cookie, storage, or tabs API permissions.');

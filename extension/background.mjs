@@ -4,7 +4,7 @@ const api = globalThis.browser ?? globalThis.chrome;
 const transport = createReadTransport();
 
 api.action.onClicked.addListener(() => {
-  api.tabs.create({ url: api.runtime.getURL('probe.html') });
+  api.tabs.create({ url: api.runtime.getURL('planner.html') });
 });
 
 api.runtime.onMessage.addListener((message, sender, reply) => {
