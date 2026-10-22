@@ -4,7 +4,7 @@ A calmer meal planner for University of Tehran dining. Pick your usual
 restaurants as colors, preview foods inside a weekly calendar, and keep your
 choices when the server rejects a request.
 
-Independent, unofficial Firefox / Zen extension. **Version 0.5.0 · MIT.**
+Independent, unofficial Firefox / Zen extension. **Version 0.6.0 · MIT.**
 
 ![The weekly planner with fictional menus and pending balance changes](docs/assets/planner-demo.jpg)
 
@@ -16,11 +16,14 @@ Independent, unofficial Firefox / Zen extension. **Version 0.5.0 · MIT.**
 4. Open **Loghmeh** from the browser toolbar. It connects using that browser's
    dining login. If signed out, use **Open dining login**, sign in normally,
    then **Reconnect dining**.
-5. Add your usual restaurants from the nested picker. Hover a slot and click
-   a food to select it; keyboard focus reveals the same choices.
+5. Add your usual restaurants from the nested picker. Food options stay visible;
+   click one to select it. Hovering an existing reservation shows ×; clicking the
+   card stages its removal. Keyboard focus provides the same actions.
 
-**The extension planner uses real dining data. Submit and changing restaurants
-submit the outgoing restaurant's pending changes.** The sample-menu link opens
+**The extension planner uses real dining data. Submit and changing restaurant
+pills submit the outgoing restaurant's pending changes.** Clicking a reservation
+stages its cancellation and activates that restaurant for Submit/Undo; other
+drafts stay pending. The sample-menu link opens
 an isolated simulation if you want to explore the interactions first.
 
 After updating source, click **Reload** in `about:debugging`, then open a new
@@ -32,10 +35,11 @@ The only host permission is `https://dining2.ut.ac.ir/*`.
 - View one Saturday-first week, with previous/next controls, Jalali and
   Gregorian dates, and today in Asia/Tehran. Only that week is requested for
   selected restaurants; menus arrive incrementally beside their loading pills.
-  Returning to a loaded week reuses its snapshot in the open tab.
-- Use **This week** to see current reservations. Coverage refers to your selected
-  places; Loghmeh does not claim to have scanned every place. No other week is
-  scanned in the background.
+  Returning to a loaded week reuses its snapshot in the open tab. The calendar
+  fills the viewport; each meal cell scrolls independently and keeps its height
+  when restaurant content changes.
+- Use **This week** to see current reservations. Only selected places are checked;
+  no other week is scanned in the background.
 - See known paid value below zero and available balance above zero on the ruler. Pending
   spending and refunds use opposite hatching. Pending amounts are estimates;
   confirmed balances come from dining. Food segments follow date, meal, place,
@@ -73,8 +77,14 @@ created by the implementation tests.
 Version 0.5.0's single-week navigation, incremental loading, cached return,
 active-week refresh, and chronological balance hatches were checked in the
 browser against fictional HTTP responses. [UI verification notes](docs/verification/ui-0.5.0.md).
+Version 0.6.0 removes the calendar instructions, coverage summary, slogan, and
+footer notices. Reservation cards are direct removal buttons; food options stay
+visible in the empty painting space. Fixed calendar rows fill the remaining
+viewport and each cell scrolls independently. Slots with no foods stay blank.
+The cross-restaurant cancellation flow was checked in the browser's HTTP fixture
+and a dedicated controller test. [Calendar verification notes](docs/verification/ui-0.6.0.md).
 
-There are 50 passing Node tests and 20 passing browser parser checks. The
+There are 51 passing Node tests and 20 passing browser parser checks. The
 write serializer and reconciliation logic are tested with fictional HTTP
 responses; one live change is verified. General refund behavior and batch
 atomicity remain unverified. See
@@ -104,7 +114,7 @@ Useful local checks:
 - `/tests/browser-mobile.html` — 390px responsive preview.
 - `/extension/probe.html` — the separate read-only connection probe.
 
-`npm run package` builds `dist/loghmeh-0.5.0.zip`, also loadable as a temporary
+`npm run package` builds `dist/loghmeh-0.6.0.zip`, also loadable as a temporary
 add-on. Packages contain `extension/` and the MIT license. Captures, outputs, private checks,
 and local credentials are ignored and excluded.
 

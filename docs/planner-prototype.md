@@ -11,6 +11,10 @@ Pending cancellations stay in place until confirmation closes their space.
 Pills no longer show idle status text, and calendar cards use restaurant color
 with full names retained in tooltips and accessible labels. Current behavior is
 summarized in the [README](../README.md) and [live integration](live-api.md).
+Version 0.6.0 removes the explanatory calendar copy and makes each editable
+reservation card a direct removal button. Food options remain visible in empty
+space; fixed meal rows fill the viewport and each cell scrolls independently.
+Cells with no offers stay blank.
 
 ## Interaction
 

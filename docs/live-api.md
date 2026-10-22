@@ -1,6 +1,6 @@
 # Live dining integration
 
-Version 0.5.0. Loghmeh uses Firefox's existing dining session. It does not
+Version 0.6.0. Loghmeh uses Firefox's existing dining session. It does not
 implement SSO, request a password, export cookies, or run a proxy server.
 
 ## Endpoints
@@ -38,8 +38,9 @@ restaurant changes and Submit retain their existing submission behavior.
 A menu read starts by asking for the session's selected week. If already at
 the target it does not advance again. Large cursor distances reset to current
 week before bounded navigation; a request never walks more than eight weeks.
-The week controls can navigate further, but those loads return a range error. Empty
-responses do not prove a publication status, so live slots say "No food returned".
+The week controls can navigate further, but those loads return a range error.
+Empty responses do not prove a publication status. Cells with no food choices
+stay blank; request failures and loading states remain explicit.
 
 The original website and other clients do not participate in this queue.
 Use one reservation interface at a time. Encoded records retain their exact
@@ -103,7 +104,7 @@ account identifiers, wallet identifiers, and raw server HTML.
 
 ## Verification
 
-- 50 Node tests cover transport boundaries, the shared queue, exact opaque
+- 51 Node tests cover transport boundaries, the shared queue, exact opaque
   serialization, cursor validation, business rejection, lost-response
   reconciliation, partial success, changed accounts/prices/quantities, and
   the existing planner and signed ledger behavior.

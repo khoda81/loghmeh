@@ -3,7 +3,7 @@
 Date: 2026-10-22, Asia/Tehran. Authenticated probe version: 0.1.1.
 
 This file records the authenticated probe milestone in 0.1.1. The package is
-now 0.5.0 with a [live planner](live-api.md) and a separate
+now 0.6.0 with a [live planner](live-api.md) and a separate
 [simulation](planner-prototype.md). Live planner reads are also verified in Zen;
 one intended real change has also been verified after read-back.
 

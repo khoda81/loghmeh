@@ -118,9 +118,6 @@ function renderPalette() {
   if (focused) document.querySelector(`[data-focus-key="${focused}"]`)?.focus({ preventScroll: true });
   const active = model.restaurants.get(model.activeId);
   document.documentElement.style.setProperty('--active-color', active.color);
-  $('brush-name').textContent = active.shortName;
-  $('brush-name').title = active.name;
-  $('brush-dot').style.setProperty('--restaurant-color', active.color);
 }
 
 function renderBalance() {
@@ -236,25 +233,26 @@ function card(choice, removing = false) {
   const draft = model.drafts.get(choice.id);
   const saving = model.inflight.has(choice.id);
   const failed = draft && model.saves.get(choice.restaurantId)?.state === 'error';
-  const node = el('div', `food-card${draft ? ' is-draft' : ''}${removing ? ' is-removing' : ''}`);
+  const removable = !choice.locked && !removing;
+  const node = el(removable ? 'button' : 'div', `food-card${draft ? ' is-draft' : ''}${removing ? ' is-removing' : ''}${removable ? ' is-removable' : ''}`);
   node.style.setProperty('--restaurant-color', restaurant.color);
   node.dataset.choiceId = choice.id;
-  node.title = restaurant.name;
-  node.setAttribute('aria-label', `${choice.name} · ${restaurant.name}`);
-  if (!choice.locked && !removing) {
-    const remove = el('button', 'card-remove', '×');
-    remove.setAttribute('aria-label', `Remove ${choice.name}`);
-    remove.addEventListener('click', () => {
-      if (!model.selectedIds.includes(choice.restaurantId)) controller.add(choice.restaurantId);
-      else controller.select(choice.restaurantId);
-      controller.removeChoice(choice);
-    });
-    node.append(remove);
+  node.dataset.focusKey = `reservation-${choice.id}`;
+  node.title = choice.locked ? choice.lockReason || restaurant.name : restaurant.name;
+  node.setAttribute('aria-label', `${removable ? 'Remove ' : ''}${choice.name} · ${restaurant.name}`);
+  if (removable) {
+    node.type = 'button';
+    node.addEventListener('click', () => controller.removeChoice(choice));
+    const hint = el('span', 'remove-hint', '×');
+    hint.setAttribute('aria-hidden', 'true');
+    node.append(hint);
+  } else if (removing) {
+    node.tabIndex = -1;
   }
   const food = el('span', 'food-name', choice.name);
   food.dir = 'rtl';
   food.title = choice.name;
-  const bottom = el('div', 'food-card-bottom');
+  const bottom = el('span', 'food-card-bottom');
   const state = failed ? 'Not saved' : saving ? 'Saving…' : removing ? 'Cancel pending' : draft ? 'Draft' : choice.locked ? 'Locked' : '';
   bottom.append(el('span', '', `${money(choice.priceRials)} t`));
   if (state) bottom.append(el('span', draft ? 'draft-state' : '', state));
@@ -262,25 +260,17 @@ function card(choice, removing = false) {
   return node;
 }
 
-function ghostOption(choice, selected) {
-  const row = el('div', `ghost-option${selected ? ' is-selected' : ''}`);
+function ghostOption(choice) {
+  const row = el('div', 'ghost-option');
   const button = el('button', 'ghost-choice');
   button.dataset.ghostId = choice.id;
   button.dataset.focusKey = `ghost-${choice.id}`;
-  button.setAttribute('aria-pressed', String(selected));
-  button.setAttribute('aria-label', `${choice.name} · ${money(choice.priceRials)} toman · ${selected ? 'Selected' : 'Choose'}`);
+  button.setAttribute('aria-label', `Choose ${choice.name} · ${money(choice.priceRials)} toman`);
   const name = el('span', 'ghost-name', choice.name);
   name.dir = 'rtl';
-  button.append(name, el('span', 'ghost-meta', `${money(choice.priceRials)} t${selected ? ' · Selected' : ''}`));
+  button.append(name, el('span', 'ghost-meta', `${money(choice.priceRials)} t`));
   button.addEventListener('click', () => controller.choose(choice));
   row.append(button);
-  if (selected) {
-    const remove = el('button', 'ghost-remove', '×');
-    remove.dataset.focusKey = `ghost-remove-${choice.id}`;
-    remove.setAttribute('aria-label', `Remove ${choice.name}`);
-    remove.addEventListener('click', () => controller.removeChoice(choice));
-    row.append(remove);
-  }
   return row;
 }
 
@@ -297,37 +287,37 @@ function renderSlots() {
     const load = model.loads.get(menuKey(model.activeId, week));
     const foods = menu?.choices.filter(choice => choice.date === date && choice.mealId === mealId) || [];
     const unlocked = foods.filter(choice => !choice.locked);
-    const others = el('div', 'slot-cards');
-    others.append(...items.filter(choice => choice.restaurantId !== model.activeId).map(choice => card(choice)),
-      ...cancelling.filter(choice => choice.restaurantId !== model.activeId).map(choice => card(choice, true)));
+    const cards = el('div', 'slot-cards');
+    cards.append(...items.map(choice => card(choice)), ...cancelling.map(choice => card(choice, true)));
+    const hasActiveBooking = items.some(choice => choice.restaurantId === model.activeId);
     const surface = el('div', `paint-surface${unlocked.length ? ' can-paint' : ''}`);
-    const active = el('div', 'active-bookings slot-cards');
-    active.append(...items.filter(choice => choice.restaurantId === model.activeId).map(choice => card(choice)),
-      ...cancelling.filter(choice => choice.restaurantId === model.activeId).map(choice => card(choice, true)));
-    surface.append(active);
-    if (unlocked.length) {
+    if (!hasActiveBooking && unlocked.length) {
       const ghosts = el('div', 'ghost-options');
       ghosts.setAttribute('role', 'group');
       ghosts.setAttribute('aria-label', `${date} ${mealName(mealId)} · ${model.restaurants.get(model.activeId).shortName}`);
-      ghosts.append(...unlocked.map(choice => ghostOption(choice, items.some(item => item.id === choice.id))));
+      ghosts.append(...unlocked.map(ghostOption));
       surface.append(ghosts);
-    } else {
+    } else if (!hasActiveBooking && (load?.state === 'error' || !menu || foods.length)) {
       const state = el(load?.state === 'error' ? 'button' : 'span', 'slot-state');
       if (load?.state === 'error') {
         state.textContent = 'Retry menu';
         state.addEventListener('click', () => controller.load(model.activeId, week, true));
       } else if (!menu) {
         state.append(el('span', 'spinner'), el('span', '', 'Loading menu'));
-      } else state.textContent = foods.length ? 'Reservation closed' : menu.published === null ? 'No food returned' : menu.published ? 'No food offered'
-        : week < currentWeek ? 'Menu unavailable' : 'Not published yet';
+      } else state.textContent = 'Reservation closed';
       surface.append(state);
     }
     cell.classList.toggle('has-conflict', conflictSlots.has(key));
-    cell.replaceChildren(others, surface);
+    cell.replaceChildren(cards);
+    if (!hasActiveBooking) cell.append(surface);
     if (conflictSlots.has(key)) cell.append(el('p', 'slot-conflict', 'Meal entitlement conflict'));
   }
-  if (focused?.startsWith('ghost-')) {
-    const target = [...document.querySelectorAll('[data-focus-key]')].find(node => node.dataset.focusKey === focused);
+  if (focused?.startsWith('ghost-') || focused?.startsWith('reservation-')) {
+    const focusKey = focused.startsWith('ghost-') && model.bookings().some(choice => `ghost-${choice.id}` === focused)
+      ? focused.replace('ghost-', 'reservation-') : focused;
+    const targets = [...document.querySelectorAll('[data-focus-key]')];
+    const target = targets.find(node => node.dataset.focusKey === focusKey)
+      || targets.find(node => node.dataset.focusKey === focusKey.replace('reservation-', 'ghost-'));
     target?.focus({ preventScroll: true });
   }
 }
@@ -348,14 +338,7 @@ function renderToday() {
   if (!nodes.length) nodes.push(el('span', '', loads.some(load => !load || ['queued', 'loading'].includes(load.state))
     ? 'Checking today’s reservations…' : loads.some(load => load.state === 'error') ? 'Some places could not be checked.'
       : 'No reservations found in your checked places.'));
-  const checked = model.selectedIds.filter(id => model.loads.get(menuKey(id, currentWeek))?.state === 'ready').length;
-  if (checked < model.selectedIds.length) nodes.push(el('span', 'muted', `${checked}/${model.selectedIds.length} places checked`));
   $('today-reservations').replaceChildren(...nodes);
-}
-
-function renderCoverage() {
-  const ready = model.selectedIds.filter(id => model.loads.get(menuKey(id, activeWeek))?.state === 'ready').length;
-  $('coverage').textContent = `${ready} of ${model.selectedIds.length} places checked · Chosen places only`;
 }
 
 function render() {
@@ -372,7 +355,6 @@ function render() {
   renderBalance();
   renderSlots();
   renderToday();
-  renderCoverage();
   const issue = model.issueFor(model.activeId);
   $('planner-warning').hidden = !issue;
   $('planner-warning').textContent = issue || '';
@@ -470,10 +452,7 @@ function initializeCalendar(preferences = {}) {
   controller = new PlannerController({ model, service, onChange: render });
   createWeek(activeWeek);
   controller.showWeek(activeWeek);
-  new ResizeObserver(() => {
-    document.documentElement.style.setProperty('--header-height', `${$('app-shell').offsetHeight}px`);
-    renderTicks();
-  }).observe($('app-shell'));
+  new ResizeObserver(renderTicks).observe($('app-shell'));
 }
 
 async function connectDining() {
@@ -545,7 +524,6 @@ if (isLive) {
   $('live-reconnect').hidden = false;
   $('live-report-button').hidden = false;
   $('mode-link').hidden = false;
-  $('data-notice').textContent = 'Live university data · One reservation tab at a time · Pending amounts are estimates.';
   connectDining();
 } else {
   if (isExtension) { $('mode-link').hidden = false; $('mode-link').href = 'planner.html'; $('mode-link').textContent = 'Connect dining'; }

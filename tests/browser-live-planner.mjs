@@ -40,7 +40,7 @@ const transport = { async request(operation, parameters={}) {
   }
   return {body:menu(parameters.restId)};
 } };
-const api = { runtime:{id:'loghmeh-test-fixture', getURL:path=>`${location.origin}/extension/${path}`,getManifest:()=>({version:'0.5.0-fixture'})},
+const api = { runtime:{id:'loghmeh-test-fixture', getURL:path=>`${location.origin}/extension/${path}`,getManifest:()=>({version:'0.6.0-fixture'})},
   permissions:{contains:async()=>true,request:async()=>true},tabs:{create:async()=>{}} };
 const session = new DiningSession({transport});
 const handler = createMessageHandler(api,session);
@@ -50,6 +50,4 @@ api.runtime.sendMessage = message=>new Promise(resolve=>handler(message,{id:api.
 }));
 globalThis.browser=api;
 document.title='Loghmeh · live API contract fixture';
-document.querySelector('#data-notice').textContent='Contract fixture · No university requests.';
 await import('../extension/planner.mjs');
-document.querySelector('#data-notice').textContent='Contract fixture · No university requests.';

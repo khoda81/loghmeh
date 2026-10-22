@@ -11,9 +11,17 @@ refinements are now in 0.5.0:
   of the active brush or save order. Pending removals hatch in place and their
   space collapses on confirmation.
 
+Version 0.6.0 removes the calendar slogan, brush instructions, coverage summary,
+and footer notices. Existing reservation cards show a hover/focus × and the
+entire card stages removal; there is no separate remove button. Food previews
+stay visible in the empty painting space and cannot cover a reservation. The
+calendar fills the viewport with equal, fixed meal rows; each cell scrolls its
+own contents. Empty menus leave blank cells rather than no-food labels. Removing a card
+from another restaurant activates its Submit/Undo context without implicitly
+saving the outgoing draft. Locked reservations retain their lock reason.
+
 Still open from the earlier interaction ideas:
 
-- Remove a conflicting food directly without first changing the active brush.
 - Clicking a reservation bar selects its restaurant. An already-selected bar
   exposes an accessible remove control.
 
@@ -25,6 +33,6 @@ their server lock/reason in both the calendar and bar controls.
 
 The live API supplies current food prices and actual balance. Pending purchase
 and recovery values remain estimates until confirmation. Missing food entries
-do not establish whether a week is unpublished; empty live menus say only that
-no food was returned. The one-change live test does not establish general refund
+do not establish whether a week is unpublished; empty live menus leave the cells
+blank without inferring a publication state. The one-change live test does not establish general refund
 rules or multi-change atomicity.

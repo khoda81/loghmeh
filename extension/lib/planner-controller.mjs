@@ -114,7 +114,15 @@ export class PlannerController {
   }
 
   removeChoice(choice) {
-    try { this.model.setDesired(choice, false); this.changed(); }
+    try {
+      this.model.setDesired(choice, false);
+      // Removing a card is an edit, not a pill switch: keep other drafts pending.
+      // Make this cancellation the Submit/Undo context without an implicit save.
+      if (!this.model.selectedIds.includes(choice.restaurantId)) this.model.selectedIds.push(choice.restaurantId);
+      this.model.activeId = choice.restaurantId;
+      if (this.activeWeek) this.load(choice.restaurantId, this.activeWeek);
+      this.changed();
+    }
     catch (error) { this.changed(error.message); }
   }
 

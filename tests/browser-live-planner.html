@@ -30,17 +30,14 @@
       <button id="add-place" class="add-place" aria-haspopup="dialog" aria-label="Add a restaurant"><span aria-hidden="true">+</span><span class="add-place-label">Add a restaurant</span></button>
     </div>
     <div class="calendar-toolbar">
-      <p class="brush-hint"><span id="brush-dot" class="color-dot"></span><span id="brush-name" dir="auto"></span><span class="muted">is your brush. Hover a slot, then click a food.</span></p>
       <nav class="week-navigation" aria-label="Calendar week"><button id="week-previous" aria-label="Previous week" title="Previous week">←</button><button id="jump-current" aria-pressed="false">This week</button><button id="week-next" aria-label="Next week" title="Next week">→</button></nav>
     </div>
-    <div class="today-strip" id="today-strip" hidden><span class="today-label" id="today-label">Today</span><div id="today-reservations">Finding today’s meals…</div><span class="autosave-hint">Saves when you change restaurant</span></div>
+    <div class="today-strip" id="today-strip" hidden><span class="today-label" id="today-label">Today</span><div id="today-reservations">Finding today’s meals…</div></div>
   </header>
 
-  <main class="calendar-main">
+  <main class="calendar-main" aria-label="Meal calendar">
     <div id="planner-warning" class="planner-warning" role="alert" hidden></div>
-    <div class="calendar-heading"><h1>A week well fed.</h1><span id="coverage">Checking your places…</span></div>
     <div id="weeks" class="weeks"></div>
-    <footer class="calendar-footer"><span>One week at a time · Saves when you change restaurant.</span><span id="data-notice">Sample menus · Your university reservations are untouched.</span></footer>
   </main>
 
   <dialog id="place-picker" aria-labelledby="place-title">

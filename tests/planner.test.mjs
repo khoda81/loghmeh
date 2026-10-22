@@ -146,6 +146,31 @@ test('known entitlement conflicts and insufficient balance block writes without 
   assert.equal(context.model.balanceRials, 4_200_000);
 });
 
+test('removing another restaurant’s reservation resolves the conflict without implicitly saving either draft', async () => {
+  const context = setup({ selectedIds: ['kooy', 'engineering'] });
+  const existing = context.service.foods('engineering', week).find(item => item.date === addDays(week, 1) && item.mealId === '1');
+  context.service.bookings.add(existing.id);
+  await load(context);
+  const replacement = choice(context);
+  context.controller.choose(replacement);
+  assert.equal(context.model.conflicts().length, 1);
+  let saves = 0;
+  const save = context.service.save.bind(context.service);
+  context.service.save = (...args) => { saves++; return save(...args); };
+  context.controller.removeChoice(existing);
+  await context.controller.idle();
+  assert.equal(context.model.activeId, 'engineering');
+  assert.equal(context.model.conflicts().length, 0);
+  assert.equal(context.model.drafts.get(existing.id).desired, false);
+  assert.equal(context.model.drafts.get(replacement.id).desired, true);
+  assert.equal(saves, 0);
+  assert.equal(context.model.balanceRials, 4_200_000);
+  await context.controller.submit();
+  assert.equal(saves, 1);
+  assert.ok(!context.model.confirmed.has(existing.id));
+  assert.ok(context.model.drafts.has(replacement.id));
+});
+
 test('a wrong-week response is rejected without contaminating the calendar', async () => {
   const context = setup({ selectedIds: ['kooy'] });
   const read = context.service.readMenu.bind(context.service);
