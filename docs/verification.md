@@ -3,9 +3,9 @@
 Date: 2026-10-22, Asia/Tehran. Authenticated probe version: 0.1.1.
 
 This file records the authenticated probe milestone in 0.1.1. The package is
-now 0.4.0 with a [live planner](live-api.md) and a separate
+now 0.4.1 with a [live planner](live-api.md) and a separate
 [simulation](planner-prototype.md). Live planner reads are also verified in Zen;
-a real planner write remains unverified.
+one intended real change has also been verified after read-back.
 
 ## Completed
 
@@ -105,3 +105,18 @@ current and next-week menus, four existing reservations, server locks, and an
 empty following week. `sessionVerified` and `menuVerified` are true;
 `writeVerified` remains false. See [the live adapter notes](live-api.md) for the
 submission protocol and limits. This milestone does not prove a real write.
+
+## Real planner write verified in 0.4.0
+
+The user performed one intended change in Zen and supplied the
+[sanitized write report](verification/zen-write-2026-10-22.json). Its save entry
+records `result: verified`, `attempted: true`, `appliedCount: 1`, and 21,560ms
+including preflight and read-back. `writeVerified` is true. No reservation or
+wallet identifiers, food names, balances, or raw responses are retained.
+
+An earlier attempt failed with `reconnect-required` before transmission.
+Version 0.4.1 adds safe, coalesced context recovery for that pre-request failure;
+it refuses account changes and does not retry an uncertain transmitted write.
+Three additional Node tests cover that recovery. The real successful write
+was user-observed in 0.4.0; the recovery fix is covered by local tests. Refund
+semantics and multi-change batch atomicity are still not established.

@@ -256,3 +256,52 @@ test('live diagnostics omit all identity, wallet, food, token, and balance data'
   assert.equal(service.connectionReport().menuVerified, true);
   assert.equal(service.connectionReport().writeVerified, false);
 });
+
+test('a forgotten background context reconnects before transmission and sends the save once', async () => {
+  let connections = 0, writes = 0;
+  const calls = [];
+  const service = new LiveDiningService({ runtime: { async sendMessage(message) {
+    calls.push(message.operation);
+    if (message.operation === 'connect') return { ok: true, value: { token: `token-${++connections}`, accountTag: 'same-account',
+      restaurants: [{ id: '10:20' }], writable: true } };
+    if (message.parameters.token === 'token-1') return { ok: false, error: { code: 'reconnect-required', message: 'Context gone before HTTP.' } };
+    writes++;
+    return { ok: true, value: { complete: true, attempted: true, appliedIds: ['food'], balanceRials: 100 } };
+  } } });
+  await service.connect();
+  await service.request('save', { token: service.token, restaurantId: '10:20', week: next, changes: [] });
+  assert.equal(writes, 1);
+  assert.deepEqual(calls, ['connect', 'save', 'connect', 'save']);
+  assert.equal(service.token, 'token-2');
+});
+
+test('automatic context recovery refuses a different account and never retries uncertain writes', async () => {
+  for (const code of ['reconnect-required', 'save-unknown']) {
+    let connections = 0, saves = 0;
+    const service = new LiveDiningService({ runtime: { async sendMessage(message) {
+      if (message.operation === 'connect') return { ok: true, value: { token: 'token', accountTag: ++connections === 1 ? 'original' : 'different',
+        restaurants: [{ id: '10:20' }], writable: true } };
+      saves++;
+      return { ok: false, error: { code, message: 'Predefined error.' } };
+    } } });
+    await service.connect();
+    await assert.rejects(service.request('save', { token: service.token, restaurantId: '10:20' }), { code: code === 'reconnect-required' ? 'account-changed' : 'save-unknown' });
+    assert.equal(saves, 1);
+    assert.equal(connections, code === 'reconnect-required' ? 2 : 1);
+  }
+});
+
+test('concurrent reads coalesce background recovery and both resume with the new handle', async () => {
+  let connections = 0;
+  const service = new LiveDiningService({ runtime: { async sendMessage(message) {
+    if (message.operation === 'connect') {
+      await new Promise(resolve => setTimeout(resolve, 0));
+      return { ok: true, value: { token: `token-${++connections}`, accountTag: 'same', restaurants: [{ id: '10:20' }], writable: true } };
+    }
+    if (message.parameters.token === 'token-1') return { ok: false, error: { code: 'reconnect-required', message: 'Context gone.' } };
+    return { ok: true, value: { week: next, choices: [], reservedIds: [] } };
+  } } });
+  await service.connect();
+  await Promise.all([service.readMenu('10:20', next), service.readMenu('10:20', current)]);
+  assert.equal(connections, 2);
+});

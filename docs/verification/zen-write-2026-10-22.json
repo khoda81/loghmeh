@@ -1,0 +1,279 @@
+{
+  "app": "Loghmeh",
+  "version": "0.4.0",
+  "environment": "extension",
+  "sessionVerified": true,
+  "menuVerified": true,
+  "writeVerified": true,
+  "checks": [
+    {
+      "operation": "connect",
+      "result": "passed",
+      "restaurantCount": 46,
+      "writable": true,
+      "elapsedMs": 2189
+    },
+    {
+      "operation": "menu",
+      "result": "passed",
+      "week": "2026-10-17",
+      "foodCount": 22,
+      "reservedCount": 0,
+      "lockedCount": 22,
+      "elapsedMs": 3497
+    },
+    {
+      "operation": "menu",
+      "result": "passed",
+      "week": "2026-10-24",
+      "foodCount": 22,
+      "reservedCount": 4,
+      "lockedCount": 4,
+      "elapsedMs": 6738
+    },
+    {
+      "operation": "menu",
+      "result": "passed",
+      "week": "2026-10-31",
+      "foodCount": 0,
+      "reservedCount": 0,
+      "lockedCount": 0,
+      "elapsedMs": 3165
+    },
+    {
+      "operation": "menu",
+      "result": "passed",
+      "week": "2026-11-07",
+      "foodCount": 0,
+      "reservedCount": 0,
+      "lockedCount": 0,
+      "elapsedMs": 383
+    },
+    {
+      "operation": "menu",
+      "result": "passed",
+      "week": "2026-10-10",
+      "foodCount": 22,
+      "reservedCount": 2,
+      "lockedCount": 22,
+      "elapsedMs": 10764
+    },
+    {
+      "operation": "menu",
+      "result": "passed",
+      "week": "2026-10-24",
+      "foodCount": 10,
+      "reservedCount": 4,
+      "lockedCount": 2,
+      "elapsedMs": 2782
+    },
+    {
+      "operation": "menu",
+      "result": "passed",
+      "week": "2026-10-31",
+      "foodCount": 0,
+      "reservedCount": 0,
+      "lockedCount": 0,
+      "elapsedMs": 1280
+    },
+    {
+      "operation": "menu",
+      "result": "passed",
+      "week": "2026-10-24",
+      "foodCount": 5,
+      "reservedCount": 1,
+      "lockedCount": 0,
+      "elapsedMs": 1106
+    },
+    {
+      "operation": "menu",
+      "result": "passed",
+      "week": "2026-10-31",
+      "foodCount": 0,
+      "reservedCount": 0,
+      "lockedCount": 0,
+      "elapsedMs": 1116
+    },
+    {
+      "operation": "menu",
+      "result": "passed",
+      "week": "2026-10-17",
+      "foodCount": 2,
+      "reservedCount": 1,
+      "lockedCount": 2,
+      "elapsedMs": 1441
+    },
+    {
+      "operation": "menu",
+      "result": "passed",
+      "week": "2026-10-17",
+      "foodCount": 8,
+      "reservedCount": 6,
+      "lockedCount": 8,
+      "elapsedMs": 854
+    },
+    {
+      "operation": "menu",
+      "result": "passed",
+      "week": "2026-10-24",
+      "foodCount": 1,
+      "reservedCount": 0,
+      "lockedCount": 0,
+      "elapsedMs": 828
+    },
+    {
+      "operation": "menu",
+      "result": "passed",
+      "week": "2026-10-31",
+      "foodCount": 0,
+      "reservedCount": 0,
+      "lockedCount": 0,
+      "elapsedMs": 535
+    },
+    {
+      "operation": "menu",
+      "result": "passed",
+      "week": "2026-10-17",
+      "foodCount": 2,
+      "reservedCount": 0,
+      "lockedCount": 2,
+      "elapsedMs": 877
+    },
+    {
+      "operation": "menu",
+      "result": "passed",
+      "week": "2026-11-07",
+      "foodCount": 0,
+      "reservedCount": 0,
+      "lockedCount": 0,
+      "elapsedMs": 1484
+    },
+    {
+      "operation": "save",
+      "result": "reconnect-required",
+      "elapsedMs": 55
+    },
+    {
+      "operation": "connect",
+      "result": "passed",
+      "restaurantCount": 46,
+      "writable": true,
+      "elapsedMs": 1718
+    },
+    {
+      "operation": "menu",
+      "result": "passed",
+      "week": "2026-10-24",
+      "foodCount": 22,
+      "reservedCount": 4,
+      "lockedCount": 4,
+      "elapsedMs": 7057
+    },
+    {
+      "operation": "save",
+      "result": "verified",
+      "attempted": true,
+      "appliedCount": 1,
+      "elapsedMs": 21560
+    },
+    {
+      "operation": "menu",
+      "result": "passed",
+      "week": "2026-10-31",
+      "foodCount": 0,
+      "reservedCount": 0,
+      "lockedCount": 0,
+      "elapsedMs": 4203
+    },
+    {
+      "operation": "menu",
+      "result": "passed",
+      "week": "2026-10-17",
+      "foodCount": 22,
+      "reservedCount": 0,
+      "lockedCount": 22,
+      "elapsedMs": 8951
+    },
+    {
+      "operation": "menu",
+      "result": "passed",
+      "week": "2026-10-24",
+      "foodCount": 10,
+      "reservedCount": 4,
+      "lockedCount": 2,
+      "elapsedMs": 2822
+    },
+    {
+      "operation": "menu",
+      "result": "passed",
+      "week": "2026-10-24",
+      "foodCount": 5,
+      "reservedCount": 1,
+      "lockedCount": 0,
+      "elapsedMs": 782
+    },
+    {
+      "operation": "menu",
+      "result": "passed",
+      "week": "2026-10-24",
+      "foodCount": 1,
+      "reservedCount": 0,
+      "lockedCount": 0,
+      "elapsedMs": 382
+    },
+    {
+      "operation": "menu",
+      "result": "passed",
+      "week": "2026-10-17",
+      "foodCount": 8,
+      "reservedCount": 6,
+      "lockedCount": 8,
+      "elapsedMs": 2967
+    },
+    {
+      "operation": "menu",
+      "result": "passed",
+      "week": "2026-10-17",
+      "foodCount": 2,
+      "reservedCount": 1,
+      "lockedCount": 2,
+      "elapsedMs": 769
+    },
+    {
+      "operation": "menu",
+      "result": "passed",
+      "week": "2026-10-17",
+      "foodCount": 2,
+      "reservedCount": 0,
+      "lockedCount": 2,
+      "elapsedMs": 573
+    },
+    {
+      "operation": "menu",
+      "result": "passed",
+      "week": "2026-10-31",
+      "foodCount": 0,
+      "reservedCount": 0,
+      "lockedCount": 0,
+      "elapsedMs": 3378
+    },
+    {
+      "operation": "menu",
+      "result": "passed",
+      "week": "2026-10-31",
+      "foodCount": 0,
+      "reservedCount": 0,
+      "lockedCount": 0,
+      "elapsedMs": 190
+    },
+    {
+      "operation": "menu",
+      "result": "passed",
+      "week": "2026-10-31",
+      "foodCount": 0,
+      "reservedCount": 0,
+      "lockedCount": 0,
+      "elapsedMs": 205
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 # Live dining integration
 
-Version 0.4.0. Loghmeh uses Firefox's existing dining session. It does not
+Version 0.4.1. Loghmeh uses Firefox's existing dining session. It does not
 implement SSO, request a password, export cookies, or run a proxy server.
 
 ## Endpoints
@@ -52,7 +52,7 @@ The page's own serializer establishes this record structure:
 The adapter keeps the entire server prefix, including template time fields.
 It sends changed records as repeated `DataId[]` form keys, plus `type=Index`,
 `personGroupId`, `restId`, and `firstEWalletId`. That array-key spelling follows
-jQuery's default form encoding and still needs a successful real-write test.
+jQuery's default form encoding and was accepted in the user's verified one-change live save.
 
 Before transmission the adapter rechecks the signed-in account and wallet,
 reloads the target week, and verifies each food's price, quantity, and lock.
@@ -64,7 +64,11 @@ stays in the draft. A retry preflights again, so already-applied changes are
 reconciled without repeating their purchase.
 
 If read-back also fails, the outcome is unknown and the draft stays intact.
-No write or cursor-advance operation is automatically retried. The user can
+No transmitted write or cursor-advance operation is automatically retried.
+Version 0.4.1 can automatically recover a missing background context and resume
+a request only when the context lookup failed before any HTTP operation. It
+rechecks the account identity and eligibility first; concurrent recoveries
+coalesce. Unknown write outcomes do not trigger this recovery. The user can
 refresh/retry, which begins with another state read.
 
 Ordinary one-portion foods with one wallet are supported. Foods with extras,
@@ -94,7 +98,7 @@ account identifiers, wallet identifiers, and raw server HTML.
 
 ## Verification
 
-- 43 Node tests cover transport boundaries, the shared queue, exact opaque
+- 46 Node tests cover transport boundaries, the shared queue, exact opaque
   serialization, cursor validation, business rejection, lost-response
   reconciliation, partial success, changed accounts/prices/quantities, and
   the existing planner and signed ledger behavior.
@@ -112,7 +116,12 @@ reconnection discovered 46 restaurants in 1946ms, current-week reading took
 3201ms, and next-week reading took 7892ms with four reserved foods and four
 locked foods. An unpublished following week correctly contained no foods.
 The report records session/menu verification, with write verification false.
-A user-chosen real reservation write is pending. No real reservation was created, changed, or cancelled during these
-implementation checks. Refund behavior and server batch atomicity are not
-yet established. Raw captures and private parser checks remain ignored locally
-and are excluded from the public repository and extension package.
+The user subsequently made one intended real change in Zen. The
+[write report](verification/zen-write-2026-10-22.json) records an attempted save
+with one applied change verified after read-back in 21,560ms. It also records
+a lost background context before the first attempt, followed by reconnection.
+This verifies one real write and its state reconciliation. Other write variants,
+general refund behavior, and server batch atomicity remain unverified. No
+disposable real reservation was created by the agent. Raw captures and private
+parser checks remain ignored locally and are excluded from the public repository
+and extension package.

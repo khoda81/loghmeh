@@ -4,7 +4,7 @@ A calmer meal planner for University of Tehran dining. Pick your usual
 restaurants as colors, preview foods inside a weekly calendar, and keep your
 choices when the server rejects a request.
 
-Independent, unofficial Firefox / Zen extension. **Version 0.4.0 · MIT.**
+Independent, unofficial Firefox / Zen extension. **Version 0.4.1 · MIT.**
 
 ![The weekly planner with fictional menus and pending balance changes](docs/assets/planner-demo.jpg)
 
@@ -59,12 +59,16 @@ live parser was checked against freshly loaded authenticated current/next-week
 responses on 2026-10-22, including existing reservations and lock/quantity data.
 **The 0.4.0 planner's live reads are verified in Zen:** 46 restaurants discovered,
 current/next-week menus loaded, and four existing reservations recognized.
-A user-chosen real write is still pending.
-No real reservation was changed during implementation testing.
+The user also verified one intended real change through Loghmeh, with
+read-back confirming it. [Sanitized write report](docs/verification/zen-write-2026-10-22.json).
+Version 0.4.1 adds automatic recovery of a lost background connection handle.
+The real change was made by the user in Zen. No disposable reservation was
+created by the implementation tests.
 
-There are 43 passing Node tests and 19 passing browser parser checks. The
+There are 46 passing Node tests and 19 passing browser parser checks. The
 write serializer and reconciliation logic are tested with fictional HTTP
-responses; this does not establish live refunds or batch atomicity. See
+responses; one live change is verified. General refund behavior and batch
+atomicity remain unverified. See
 [live API notes](docs/live-api.md) and the earlier
 [probe verification record](docs/verification.md).
 
@@ -91,8 +95,8 @@ Useful local checks:
 - `/tests/browser-mobile.html` — 390px responsive preview.
 - `/extension/probe.html` — the separate read-only connection probe.
 
-`npm run package` builds `dist/loghmeh-0.4.0.zip`, also loadable as a temporary
-add-on. Packages contain only `extension/`. Captures, outputs, private checks,
+`npm run package` builds `dist/loghmeh-0.4.1.zip`, also loadable as a temporary
+add-on. Packages contain `extension/` and the MIT license. Captures, outputs, private checks,
 and local credentials are ignored and excluded.
 
 The background script owns navigation, preflight, writes, and read-back in a
