@@ -108,7 +108,12 @@ export class PlannerModel {
   }
 
   capture(restaurantId) {
-    const changes = this.changes(restaurantId).map(draft => ({ ...draft }));
+    const changes = this.changes(restaurantId).map(draft => {
+      const current = this.menus.get(menuKey(draft.choice.restaurantId, draft.choice.week))?.choices.find(choice => choice.id === draft.choice.id);
+      return { ...draft, expectedReserved: this.confirmed.has(draft.choice.id),
+        expectedPriceRials: draft.choice.unitPriceRials ?? draft.choice.priceRials,
+        expectedPreviousCount: current?.previousCount ?? draft.choice.previousCount };
+    });
     for (const draft of changes) {
       this.inflight.set(draft.choice.id, draft.revision);
       this.inflightDrafts.set(draft.choice.id, draft);

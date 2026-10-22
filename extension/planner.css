@@ -19,6 +19,12 @@ a:hover { text-decoration: underline; }
 .topbar-actions > a { color: var(--muted); }
 .demo-label { display: flex; align-items: center; gap: 7px; border: 0; background: transparent; padding: 8px 0 8px 8px; font-size: 12px; color: #81754d; }
 .demo-dot { width: 6px; height: 6px; border-radius: 50%; background: #aa914c; }
+.live-label { padding: 8px 0; border: 0; background: transparent; color: var(--green); font-size: 11px; }
+.live-connection { padding: 16px 0; font-size: 12px; }
+.live-connection p { margin: 0 0 10px; }
+.live-connection > div { display: flex; align-items: center; gap: 18px; }
+.report-json { width: 100%; min-height: 320px; resize: vertical; border: 1px solid var(--line); border-radius: 6px; padding: 12px; background: var(--paper); color: var(--ink); font: 11px/1.6 monospace; }
+.is-connecting .wallet, .is-connecting .palette-row, .is-connecting .calendar-toolbar, .is-connecting .today-strip, .is-connecting .calendar-main { display: none; }
 .wallet { padding-top: 12px; }
 .wallet-top { display: flex; align-items: center; gap: 25px; }
 .wallet-amount { display: flex; align-items: baseline; gap: 8px; }
@@ -59,7 +65,7 @@ a:hover { text-decoration: underline; }
 .place-token.has-error { border-color: var(--danger); }
 .place-pill { display: flex; gap: 8px; align-items: center; min-height: 36px; border: 0; background: transparent; padding: 6px 12px; border-radius: 20px; }
 .color-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; background: var(--restaurant-color, var(--active-color)); }
-.pill-name { font-size: 13px; font-weight: 650; }
+.pill-name { font-size: 13px; font-weight: 650; max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pill-status { font-size: 10px; color: var(--muted); white-space: nowrap; }
 .pill-status.error { color: var(--danger); }
 .place-remove { width: 24px; border: 0; background: transparent; color: #91998a; border-radius: 0 20px 20px 0; padding: 0 9px 0 0; }

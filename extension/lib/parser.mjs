@@ -82,6 +82,7 @@ export function parseMenu(html) {
     if (!clean(name.textContent)) throw invalid('A food entry is missing its name.');
     const priceText = digits(label.querySelector('.reserveFoodType')?.textContent || '').replace(/[,،\s]/gu, '');
     const choice = {
+      serverKey: key,
       date: `${date[1]}-${date[2]}-${date[3]}`,
       mealId,
       meal: ({ 1: 'ناهار', 3: 'شام' })[mealId] || `Meal ${mealId}`,

@@ -1,0 +1,49 @@
+{
+  "app": "Loghmeh",
+  "version": "0.4.0",
+  "environment": "extension",
+  "sessionVerified": true,
+  "menuVerified": true,
+  "writeVerified": false,
+  "checks": [
+    {
+      "operation": "connect",
+      "result": "login-required",
+      "elapsedMs": 6230
+    },
+    {
+      "operation": "connect",
+      "result": "passed",
+      "restaurantCount": 46,
+      "writable": true,
+      "elapsedMs": 1946
+    },
+    {
+      "operation": "menu",
+      "result": "passed",
+      "week": "2026-10-17",
+      "foodCount": 22,
+      "reservedCount": 0,
+      "lockedCount": 22,
+      "elapsedMs": 3201
+    },
+    {
+      "operation": "menu",
+      "result": "passed",
+      "week": "2026-10-24",
+      "foodCount": 22,
+      "reservedCount": 4,
+      "lockedCount": 4,
+      "elapsedMs": 7892
+    },
+    {
+      "operation": "menu",
+      "result": "passed",
+      "week": "2026-10-31",
+      "foodCount": 0,
+      "reservedCount": 0,
+      "lockedCount": 0,
+      "elapsedMs": 3356
+    }
+  ]
+}

@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Loghmeh · your week, a little easier</title>
+  <link rel="icon" href="/extension/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/extension/planner.css">
+  <script type="module" src="/tests/browser-live-planner.mjs"></script>
+</head>
+<body>
+  <header class="app-shell" id="app-shell">
+    <div class="topbar">
+      <a class="brand" href="planner.html"><img src="/extension/icon.svg" width="30" height="30" alt=""><span>loghmeh <span lang="fa">لقمه</span></span></a>
+      <div class="topbar-actions"><a href="probe.html">Connection probe</a><a id="mode-link" href="planner.html?demo=1" hidden>Sample menus</a><button id="live-report-button" class="live-label" hidden>Report</button><button id="live-reconnect" class="live-label" hidden>Connect dining</button><button id="open-simulation" class="demo-label">Interactive demo <span class="demo-dot"></span></button></div>
+    </div>
+    <div id="live-connection" class="live-connection" role="status" hidden><p id="connection-message">Connecting to your dining session…</p><div><button id="connect-dining" class="plain-primary">Connect dining</button><button id="open-dining-login" class="undo-button">Open dining login</button></div></div>
+    <div class="wallet">
+      <div class="wallet-top">
+        <div class="wallet-amount"><span class="eyebrow">Your balance</span><strong id="balance-value">—</strong><span class="unit">toman</span></div>
+        <div class="wallet-projection"><span id="pending-label">No pending changes</span><span><span id="projection-label">After saving</span> <strong id="projected-value">—</strong></span></div>
+        <div class="wallet-actions"><button id="undo-changes" class="undo-button" hidden>Undo changes</button><button id="submit" class="submit-button" disabled>All saved</button></div>
+      </div>
+      <div class="balance-track" id="balance-track" role="img" aria-label="Balance and reservations"><div id="balance-cash" class="balance-cash"></div><div id="balance-segments" class="balance-segments"></div><div id="balance-zero" class="balance-zero"></div></div>
+      <div id="balance-ticks" class="balance-ticks" aria-hidden="true"></div>
+      <div class="balance-key"><span><i class="ledger-swatch reserved"></i><span id="reserved-total">Known reservations</span></span><span><i class="ledger-swatch adding"></i>Pending food</span><span><i class="ledger-swatch removing"></i>Pending refund</span><span class="cash-key">0 → balance · available</span></div>
+    </div>
+    <div class="palette-row">
+      <div id="palette" class="palette" role="group" aria-label="Restaurant colors"></div>
+      <button id="add-place" class="add-place" aria-haspopup="dialog" aria-label="Add a restaurant"><span aria-hidden="true">+</span><span class="add-place-label">Add a restaurant</span></button>
+    </div>
+    <div class="calendar-toolbar">
+      <p class="brush-hint"><span id="brush-dot" class="color-dot"></span><span id="brush-name" dir="auto"></span><span class="muted">is your brush. Hover a slot, then click a food.</span></p>
+      <nav aria-label="Jump to week"><button id="jump-current">This week</button><button id="jump-next" class="is-current">Next week</button></nav>
+    </div>
+    <div class="today-strip"><span class="today-label" id="today-label">Today</span><div id="today-reservations">Finding today’s meals…</div><span class="autosave-hint">Saves when you change restaurant</span></div>
+  </header>
+
+  <main class="calendar-main">
+    <div id="planner-warning" class="planner-warning" role="alert" hidden></div>
+    <div class="calendar-heading"><h1>A week well fed.</h1><span id="coverage">Checking your places…</span></div>
+    <div id="past-sentinel" class="scroll-sentinel" aria-hidden="true"></div>
+    <div id="weeks" class="weeks"></div>
+    <div id="future-sentinel" class="scroll-sentinel" aria-hidden="true"></div>
+    <footer class="calendar-footer"><span>Keep scrolling for more weeks.</span><span id="data-notice">Sample menus · Your university reservations are untouched.</span></footer>
+  </main>
+
+  <dialog id="place-picker" aria-labelledby="place-title">
+    <div class="panel-heading"><div><p class="eyebrow">Build your palette</p><h2 id="place-title">Your usual places.</h2></div><button id="close-places" class="icon-button" aria-label="Close restaurant picker">×</button></div>
+    <p class="dialog-intro">Choose a few favorites. Each one gets its own color.</p>
+    <label class="search-label"><span class="sr-only">Search restaurants or groups</span><input id="place-search" type="search" placeholder="Find a restaurant or group…" autocomplete="off"></label>
+    <div id="place-groups" class="place-groups"></div>
+    <div class="dialog-footer"><span id="selected-place-count"></span><button id="done-places" class="plain-primary">Done</button></div>
+  </dialog>
+
+  <dialog id="connection-report" aria-labelledby="report-title"><div class="panel-heading"><h2 id="report-title">Connection report</h2><button id="close-report" class="icon-button" aria-label="Close connection report">×</button></div><p class="dialog-intro">Request results only. No passwords, cookies, balances, food names, or account identifiers.</p><textarea id="live-report-json" class="report-json" readonly aria-label="Connection report JSON"></textarea></dialog>
+
+  <dialog id="simulation" aria-labelledby="simulation-title">
+    <div class="panel-heading"><div><p class="eyebrow">Try the awkward bits</p><h2 id="simulation-title">A safe little sandbox.</h2></div><button id="close-simulation" class="icon-button" aria-label="Close simulation controls">×</button></div>
+    <p class="dialog-intro">All menus, money, and submissions here are fictional. Nothing is sent to the university.</p>
+    <label class="simulation-option">Request speed<select id="request-speed"><option value="150">Quick</option><option value="650" selected>Realistic</option><option value="1800">Very slow</option></select></label>
+    <label class="simulation-check"><input id="fail-save" type="checkbox"> Reject the next submission</label>
+    <label class="simulation-check"><input id="fail-read" type="checkbox"> Fail the next menu request</label>
+    <p class="simulation-rule">Sample rule: one student meal per slot. A supplementary meal uses a separate entitlement, so both can appear together.</p>
+    <button id="reset-demo" class="danger-link">Reset sample data and local drafts</button>
+  </dialog>
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+</body>
+</html>

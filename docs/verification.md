@@ -3,8 +3,9 @@
 Date: 2026-10-22, Asia/Tehran. Authenticated probe version: 0.1.1.
 
 This file records the authenticated probe milestone in 0.1.1. The package is
-now 0.3.0 with a separate [simulated weekly planner](planner-prototype.md);
-the new UI has not submitted any university reservations.
+now 0.4.0 with a [live planner](live-api.md) and a separate
+[simulation](planner-prototype.md). Live planner reads are also verified in Zen;
+a real planner write remains unverified.
 
 ## Completed
 
@@ -94,3 +95,13 @@ The test does not submit or cancel reservations, navigate weeks, send ratings,
 or process payments. The only network targets allowed by the request builder
 are the three reads listed in the README. No broad SSO host permission is used;
 the login action opens the official dining entry point in a normal tab.
+
+## Live planner reads verified in 0.4.0
+
+The user reloaded 0.4.0 in Zen and confirmed that the planner displays the
+real menus. Their [sanitized planner report](verification/zen-planner-2026-10-22.json)
+records logged-out detection, successful reconnection, 46 discovered restaurants,
+current and next-week menus, four existing reservations, server locks, and an
+empty following week. `sessionVerified` and `menuVerified` are true;
+`writeVerified` remains false. See [the live adapter notes](live-api.md) for the
+submission protocol and limits. This milestone does not prove a real write.

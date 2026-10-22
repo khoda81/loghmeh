@@ -50,11 +50,41 @@ export function buildReadRequest(operation, parameters = {}) {
   return { url: DINING_ORIGIN + definition.path, init, path: definition.path };
 }
 
+const navigation = Object.freeze({ current: '/Reserves/GetCurrentReservePage',
+  next: '/Reserves/GetNextReservePage', previous: '/Reserves/GetPreReservePage' });
+export function buildDiningRequest(operation, parameters = {}) {
+  if (Object.hasOwn(operations, operation)) return buildReadRequest(operation, parameters);
+  if (!Object.hasOwn(navigation, operation) && operation !== 'submit') {
+    throw new ProbeError('invalid-request', 'Unknown dining operation.');
+  }
+  const fields = ['personGroupId', 'restId', ...(operation === 'submit' ? ['firstEWalletId', 'records'] : [])];
+  if (!parameters || typeof parameters !== 'object' || Array.isArray(parameters)
+      || Object.keys(parameters).some(key => !fields.includes(key))) throw new ProbeError('invalid-request', 'Unexpected request fields.');
+  const body = new URLSearchParams();
+  for (const name of fields.filter(name => name !== 'records')) {
+    if (!/^[1-9]\d{0,11}$/.test(String(parameters[name] ?? ''))) throw new ProbeError('invalid-request', 'Invalid dining identifier.');
+    body.set(name, String(parameters[name]));
+  }
+  if (operation === 'submit') {
+    if (!Array.isArray(parameters.records) || !parameters.records.length || parameters.records.length > 140
+        || parameters.records.some(record => typeof record !== 'string' || record.length > 4000
+          || !/^rr[\w.-]+(?:t|f)fco\d+pco\d+options\|[\d;|-]*\|diet:[01]$/u.test(record))) {
+      throw new ProbeError('invalid-request', 'Invalid reservation records.');
+    }
+    body.set('type', 'Index');
+    for (const record of parameters.records) body.append('DataId[]', record);
+  } else body.set('isKiosk', 'false');
+  const path = operation === 'submit' ? '/Reserves/Index' : navigation[operation];
+  return { url: DINING_ORIGIN + path, path, init: { method: 'POST', credentials: 'include', redirect: 'manual',
+    cache: 'no-store', headers: { Accept: 'text/html', 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+      'X-Requested-With': 'XMLHttpRequest' }, body: body.toString() } };
+}
+
 // One shared queue, including across UI tabs. Failed reads do not poison it.
-export function createReadTransport(fetcher = fetch, { timeoutMs = 20000 } = {}) {
+function createTransport(builder, fetcher, { timeoutMs = 20000 } = {}) {
   let queue = Promise.resolve();
   async function perform(operation, parameters) {
-    const { url, init, path } = buildReadRequest(operation, parameters);
+    const { url, init, path } = builder(operation, parameters);
     const started = performance.now();
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -82,7 +112,9 @@ export function createReadTransport(fetcher = fetch, { timeoutMs = 20000 } = {})
         throw error;
       }
       if (controller.signal.aborted) {
-        throw new ProbeError('timeout', 'Dining took too long to respond. Nothing was submitted.', diagnostic);
+        throw new ProbeError(operation === 'submit' ? 'save-unknown' : 'timeout', operation === 'submit'
+          ? 'The save response was lost. Check reservations before trying again.'
+          : 'Dining took too long to respond. Nothing was submitted.', diagnostic);
       }
       throw new ProbeError('network-error', 'Could not reach dining. Check the connection and extension site access.', diagnostic);
     } finally {
@@ -102,3 +134,9 @@ export function createReadTransport(fetcher = fetch, { timeoutMs = 20000 } = {})
     },
   };
 }
+
+export const createReadTransport = (fetcher = fetch, options) => createTransport(buildReadRequest, fetcher, options);
+export const createDiningTransport = (fetcher = fetch, options) => {
+  const transport = createTransport(buildDiningRequest, fetcher, options);
+  return { request: transport.read };
+};

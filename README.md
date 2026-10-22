@@ -1,91 +1,76 @@
 # Loghmeh · لقمه
 
-A Firefox / Zen dining client with a weekly planner prototype and a verified
-read-only dining connection probe. Current package: **0.3.0**.
+A calmer meal planner for University of Tehran dining. Pick your usual
+restaurants as colors, preview foods inside a weekly calendar, and keep your
+choices when the server rejects a request.
 
-## Try the weekly planner
+Independent, unofficial Firefox / Zen extension. **Version 0.4.0 · MIT.**
 
-Run `npm run preview`, then open
-`http://127.0.0.1:4173/extension/planner.html`. The extension's toolbar button
-also opens the planner after reloading the temporary add-on.
+![The weekly planner with fictional menus and pending balance changes](docs/assets/planner-demo.jpg)
 
-- Scroll through Saturday-first weeks in either direction. Jalali dates appear
-  alongside Gregorian dates; today is calculated in Asia/Tehran.
-- Pick restaurants from a searchable nested list. Your chosen places become
-  persistent color pills with individual loading, saving, and error states.
-- Select a pill to choose a brush. Hover a slot to preview its foods, then
-  click the food directly. Keyboard focus reveals the same choices; touch
-  devices show them inline. Different restaurant reservations can share a
-  slot when their sample entitlements allow it.
-- Changing restaurants submits the outgoing restaurant's draft. **Submit**
-  saves the active restaurant; **Undo changes** restores its confirmed state.
-- Known paid meals occupy the negative side of a signed balance bar. Pending
-  purchases and refunds use opposite hatching, with separate lanes for swaps.
-  On confirmation, the round ruler moves while surviving food blocks stay put.
-- **Interactive demo** opens speed and failure controls. Failed saves retain
-  the draft, offer retry, and do not reset the balance preview.
+## Use in Zen / Firefox
 
-**The weekly planner uses only fictional data, even inside the extension.**
-Its submissions affect a local simulated service, never university reservations.
-Restaurant choices, sample server state, and drafts are saved locally in this
-browser. The demo reset control clears those sample records only.
+1. Clone this repository.
+2. Open `about:debugging#/runtime/this-firefox` → **Load Temporary Add-on…**.
+3. Select `extension/manifest.json` from your checkout.
+4. Open **Loghmeh** from the browser toolbar. It connects using that browser's
+   dining login. If signed out, use **Open dining login**, sign in normally,
+   then **Reconnect dining**.
+5. Add your usual restaurants from the nested picker. Hover a slot and click
+   a food to select it; keyboard focus reveals the same choices.
 
-Only chosen restaurants are fetched. The visible weeks load incrementally,
-while the current week is also checked for the Today strip. The UI labels its
-coverage and does not claim to have checked every eligible restaurant.
+**The extension planner uses real dining data. Submit and changing restaurants
+submit the outgoing restaurant's pending changes.** The sample-menu link opens
+an isolated simulation if you want to explore the interactions first.
 
-## Try the probe in Zen
+After updating source, click **Reload** in `about:debugging`, then open a new
+Loghmeh tab. Temporary installation ends when removed or the browser restarts.
+The only host permission is `https://dining2.ut.ac.ir/*`.
 
-1. Open `about:debugging#/runtime/this-firefox` in **Zen**.
-2. Choose **Load Temporary Add-on…**, then select
-   `/home/mahdi/Projects/loghmeh/extension/manifest.json`.
-3. Open **Loghmeh** from the browser's extensions menu / toolbar, then choose
-   **Connection probe**.
-4. If shown, click **Allow dining access**. The only host permission is
-   `https://dining2.ut.ac.ir/*`.
-5. Click **Check connection**. If signed out, use **Open dining login**, finish
-   the normal SSO login, return to Loghmeh, and check again.
-6. Select a group and restaurant, then click **Read menu**.
+## What it does
 
-Success means the extension shows **Session reused** and
-**Authenticated menu read passed**. The **Connection report** contains a
-sanitized result that can be copied into this chat.
+- Scroll Saturday-first weeks, with Jalali and Gregorian dates and today in
+  Asia/Tehran. Menus arrive incrementally, with a status for each restaurant.
+- Check current reservations while planning next week. Coverage refers to
+  your selected places; Loghmeh does not claim to have scanned every place.
+- See known paid food below zero and available balance above zero. Pending
+  spending and refunds use opposite hatching. Pending amounts are estimates;
+  confirmed balances come from dining. Amounts are displayed in toman.
+- Submit by restaurant. A rejected or uncertain request keeps its draft.
+  Read-back checks what was actually accepted, including partial success.
+- Reuse your normal browser login. Loghmeh does not ask for passwords, export
+  cookies, register a new SSO client, or run a backend server.
 
-The extension uses **Zen's own session**, not the session from the browser in
-this chat. The first test targets the normal browser cookie store. If your
-dining login is in a Firefox container, report whether the probe can reuse it;
-container-aware transport is not verified yet.
+Live writes currently support ordinary single-portion foods and one wallet.
+Extras, diet controls, multiple portions, and multiple-wallet spending need
+further support; unsupported changes stay disabled. Use one dining interface
+at a time because the university API shares a week cursor.
 
-Temporary installation lasts until removal or a browser restart. Firefox's
-permission wording grants site access broadly, but this prototype's request
-allowlist contains only:
+Live restaurant preferences stay local. Real menu snapshots, balances, account
+identifiers, and drafts are not persisted. Keep the planner tab open to retain
+pending choices; it warns before closing with a draft. The **Report** button
+provides diagnostics without passwords, cookies, balances, food names, or
+account identifiers.
 
-| Operation | Method and path |
-| --- | --- |
-| Discover groups | `GET /Reserves` |
-| Discover restaurants | `POST /Reserves/GetRestaurantByPersonGroup` |
-| Read a menu | `POST /Reserves/GetReservePage` |
+## Verification status
 
-After a source update, click **Reload** for Loghmeh in `about:debugging`, then
-close and reopen its tab to load the updated parser. The Connection report
-shows the running version; the wrapped-label fix is included in **0.1.1**.
+The original session/menu probe was verified in the user's Zen setup. The new
+live parser was checked against freshly loaded authenticated current/next-week
+responses on 2026-10-22, including existing reservations and lock/quantity data.
+**The 0.4.0 planner's live reads are verified in Zen:** 46 restaurants discovered,
+current/next-week menus loaded, and four existing reservations recognized.
+A user-chosen real write is still pending.
+No real reservation was changed during implementation testing.
 
-There is no university reservation submission, cancellation, rating, payment,
-next-week, or previous-week request in this version. Reading a menu uses the dining
-session's current week. Its API contains a stateful week cursor; the probe
-does not advance it. It sends no credentials or account data to any other
-service. It doesn't read raw cookies, ask for passwords, persist account
-data, or run analytics. Requests happen only after your actions.
+There are 43 passing Node tests and 19 passing browser parser checks. The
+write serializer and reconciliation logic are tested with fictional HTTP
+responses; this does not establish live refunds or batch atomicity. See
+[live API notes](docs/live-api.md) and the earlier
+[probe verification record](docs/verification.md).
 
-If a menu read fails, the last successful menu remains visible. Login and
-generic error pages are failures, not empty menus. Mobile and desktop copies
-of the same food are deduplicated. The connection report excludes food names,
-account balances, account identifiers, cookie values, and server HTML.
+## Develop and preview
 
-## Development
-
-No dependencies or installation step are needed. Node 22+ and Python 3 are
-sufficient.
+Node 22+ and Python 3 are sufficient. No dependencies or install step.
 
 ```sh
 npm test
@@ -93,39 +78,28 @@ npm run check
 npm run preview
 ```
 
-Weekly planner: `http://127.0.0.1:4173/extension/planner.html`.
-Read-only probe: `http://127.0.0.1:4173/extension/probe.html`.
-Browser parser checks: `http://127.0.0.1:4173/tests/browser.html`.
-390px responsive check: `http://127.0.0.1:4173/tests/browser-mobile.html`.
-Expired-session preview: add `?scenario=expired` to the probe URL.
+Open <http://localhost:4173/extension/planner.html>. **Localhost always uses
+fictional data and cannot reuse your dining login.** The extension's explicit
+sample mode is `planner.html?demo=1` and keeps separate local sample state.
 
-**The localhost preview uses fictional fixtures and never calls dining.**
-It cannot verify Zen authentication. This distinction also appears in the
-on-screen notice and exported report.
+Useful local checks:
 
-```sh
-npm run package
-```
+- `/tests/browser.html` — DOM parser checks.
+- `/tests/browser-live-planner.html` — the live client/background/parser stack
+  with fictional HTTP responses; no university requests. Add `?reject=1` to
+  exercise business rejection.
+- `/tests/browser-mobile.html` — 390px responsive preview.
+- `/extension/probe.html` — the separate read-only connection probe.
 
-This writes `dist/loghmeh-0.3.0.zip`, also loadable as a temporary
-add-on. The Firefox manifest uses an event background script; a future Chrome
-package can share the UI and transport with a different background manifest.
+`npm run package` builds `dist/loghmeh-0.4.0.zip`, also loadable as a temporary
+add-on. Packages contain only `extension/`. Captures, outputs, private checks,
+and local credentials are ignored and excluded.
 
-## Scope and next gate
+The background script owns navigation, preflight, writes, and read-back in a
+single queue. The UI owns confirmed state separately from draft intent and
+in-flight revisions. Details: [live integration](docs/live-api.md) and
+[prototype design](docs/planner-prototype.md).
 
-The first milestone is **verified in Zen** as of 2026-10-22: the user confirmed
-logged-out detection and existing-session reuse, then successfully read a real
-menu with 44 checkbox nodes deduplicated into 22 foods. See
-[verification status](docs/verification.md) for the evidence and test coverage.
-The weekly UX is now implemented as an interactive simulation of the user's
-restaurant-painting design. See [planner notes](docs/planner-prototype.md) for
-state ownership, limitations, and verification. Live reservation changes still
-need a separately verified write adapter; the probe remains read-only.
+## License
 
-The preceding investigation documented the dining HTML endpoints, hidden
-limits, duplicate markup, custom write serialization, and stateful week cursor.
-The write contract remains unverified with an actual reservation change.
-
-References: [Firefox host permissions](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/manifest.json/host_permissions),
-[background scripts](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/manifest.json/background),
-[temporary installation](https://extensionworkshop.com/documentation/develop/temporary-installation-in-firefox/).
+[MIT](LICENSE). This project is not affiliated with the University of Tehran.

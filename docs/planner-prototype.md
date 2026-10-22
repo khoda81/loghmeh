@@ -1,7 +1,8 @@
 # Weekly restaurant-painting prototype
 
-Version 0.3.0, 2026-10-22. This surface uses fictional data throughout.
-The existing read-only probe is still the only university networking client.
+This records the 0.3.0 prototype, 2026-10-22, which uses fictional data.
+Version 0.4.0 adds the separate [live API adapter](live-api.md); the localhost
+preview and explicit sample mode still use this simulation.
 
 ## Interaction
 

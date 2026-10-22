@@ -2,6 +2,8 @@ import { PlannerModel, MEALS, addDays, weekOf, tehranToday, menuKey, slotKey } f
 import { SignedBalanceLedger, signedBalanceTicks } from './lib/signed-balance.mjs';
 import { DemoDiningService, RESTAURANTS } from './lib/planner-demo.mjs';
 import { PlannerController } from './lib/planner-controller.mjs';
+import { LiveDiningService } from './lib/planner-live.mjs';
+import { createExtensionClient } from './lib/client.mjs';
 
 // The calendar restores a week explicitly; browser scroll restoration must not race it.
 history.scrollRestoration = 'manual';
@@ -13,19 +15,23 @@ const el = (tag, className, text) => {
   if (text !== undefined) node.textContent = text;
   return node;
 };
-const money = rials => Math.round(rials / 10).toLocaleString('en-US');
+const money = rials => (rials / 10).toLocaleString('en-US', { maximumFractionDigits: 1 });
 const today = tehranToday();
 const currentWeek = weekOf(today);
 const nextWeek = addDays(currentWeek, 7);
 const storageKey = `loghmeh:planner-demo:v1:${today}`;
+const extensionApi = globalThis.browser ?? globalThis.chrome;
+const isExtension = Boolean(extensionApi?.runtime?.id);
+const isLive = isExtension && new URLSearchParams(location.search).get('demo') !== '1';
+const sessionClient = isExtension ? createExtensionClient(extensionApi) : null;
 let saved;
-try { saved = JSON.parse(localStorage.getItem(storageKey)); } catch { /* The demo works without local persistence. */ }
-const service = new DemoDiningService({ today, saved: saved?.server });
-const model = new PlannerModel({ restaurants: RESTAURANTS, balanceRials: service.balanceRials,
-  selectedIds: saved?.model?.selectedIds || ['kooy', 'engineering', 'garden'],
-  activeId: saved?.model?.activeId || 'kooy', drafts: saved?.model?.drafts, menus: saved?.model?.menus });
-if (!model.selectedIds.length) { model.selectedIds = ['kooy']; model.activeId = 'kooy'; }
-const controller = new PlannerController({ model, service, onChange: render });
+try { if (!isLive) saved = JSON.parse(localStorage.getItem(storageKey)); } catch { /* Local persistence is optional. */ }
+const service = isLive ? new LiveDiningService(extensionApi) : new DemoDiningService({ today, saved: saved?.server });
+let restaurants = isLive ? [] : RESTAURANTS;
+let model;
+let controller;
+let accountTag;
+let connecting = false;
 const faDate = new Intl.DateTimeFormat('fa-IR', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
 const shortFaDate = new Intl.DateTimeFormat('fa-IR', { day: 'numeric', month: 'short', timeZone: 'UTC' });
 const englishDate = new Intl.DateTimeFormat('en', { day: 'numeric', month: 'short', timeZone: 'UTC' });
@@ -34,7 +40,7 @@ const fullWeekday = new Intl.DateTimeFormat('en', { weekday: 'long', timeZone: '
 const asDate = day => new Date(day + 'T12:00:00Z');
 const mealName = id => MEALS.find(meal => meal.id === id)?.name || id;
 const hour = Number(new Intl.DateTimeFormat('en', { hour: 'numeric', hourCycle: 'h23', timeZone: 'Asia/Tehran' }).format(new Date()));
-const currentMeal = hour < 16 ? '1' : '3'; // Sample serving windows; live times still need verification.
+const currentMeal = isLive ? null : hour < 16 ? '1' : '3'; // Live serving windows are not assumed.
 const weekNodes = new Map();
 const ledger = new SignedBalanceLedger();
 const segmentNodes = new Map();
@@ -52,7 +58,10 @@ let modalScrollY = 0;
 let touchY = 0;
 
 function persist() {
-  try { localStorage.setItem(storageKey, JSON.stringify({ model: model.exportState(), server: service.exportState() })); }
+  try {
+    if (isLive) localStorage.setItem('loghmeh:live:palette:v1', JSON.stringify({ selectedIds: model.selectedIds, activeId: model.activeId }));
+    else localStorage.setItem(storageKey, JSON.stringify({ model: model.exportState(), server: service.exportState() }));
+  }
   catch { /* State remains usable in memory if storage is disabled or full. */ }
 }
 
@@ -127,6 +136,7 @@ function renderBalance() {
   const pending = [spendingRials ? `${money(spendingRials)} spending` : '', recoveryRials ? `${money(recoveryRials)} recovery` : ''].filter(Boolean);
   $('pending-label').textContent = pending.length ? `${pending.join(' · ')} pending`
     : model.changes().length ? 'Change queued behind a saving meal' : 'No pending changes';
+  $('projection-label').textContent = isLive && model.changes().length ? 'Estimated after saving' : 'After saving';
   $('reserved-total').textContent = `${money(reservedRials)} reserved`;
   const keep = new Set();
   for (const entry of ledgerView.segments) {
@@ -145,7 +155,7 @@ function renderBalance() {
     segment.style.left = `${startRials / extentRials * 100}%`;
     segment.style.width = `${(endRials - startRials) / extentRials * 100}%`;
     const status = state === 'adding' ? 'Pending food' : state === 'removing' ? 'Pending refund' : 'Reserved';
-    segment.title = `${restaurant.shortName} · ${choice.name} · ${money(choice.priceRials)} toman · ${status}`;
+    segment.title = `${restaurant.shortName} · ${choice.name} · ${money(choice.priceRials)} toman · ${status}${isLive && state !== 'reserved' ? ' (estimate)' : ''}`;
   }
   for (const [id, node] of segmentNodes) if (!keep.has(id)) { node.remove(); segmentNodes.delete(id); }
   $('balance-zero').style.left = `${zeroFraction * 100}%`;
@@ -155,10 +165,10 @@ function renderBalance() {
   renderTicks();
   const busy = controller.saveJobs.has(model.activeId);
   const count = model.changes(model.activeId).length;
-  $('submit').disabled = !count || busy || Boolean(model.issueFor(model.activeId));
+  $('submit').disabled = !count || busy || Boolean(model.issueFor(model.activeId)) || (isLive && !service.writable);
   $('submit').textContent = busy ? 'Saving…' : count ? `Submit · ${count}` : model.changes().length ? 'No changes here' : 'All saved';
   $('submit').setAttribute('aria-label', `Submit changes for ${model.restaurants.get(model.activeId).shortName}`);
-  $('submit').title = model.issueFor(model.activeId) || 'Submit this restaurant’s changes';
+  $('submit').title = (isLive && !service.writable ? service.writeReason || 'Reconnect dining before saving' : '') || model.issueFor(model.activeId) || 'Submit this restaurant’s changes';
   $('undo-changes').hidden = !count;
   $('undo-changes').disabled = busy;
 }
@@ -350,6 +360,15 @@ function renderCoverage() {
 }
 
 function render() {
+  if (!model) return;
+  if (isLive) {
+    const expired = [...model.loads.values(), ...model.saves.values()].find(state => ['login-required', 'reconnect-required', 'account-changed'].includes(state.code));
+    if (expired) {
+      service.writable = false;
+      $('live-connection').hidden = false;
+      $('connection-message').textContent = `${expired.message} Your pending choices stay in this tab.`;
+    }
+  }
   renderPalette();
   renderBalance();
   renderSlots();
@@ -372,10 +391,10 @@ function render() {
 
 function renderPlacePicker() {
   const search = $('place-search').value.trim().toLocaleLowerCase();
-  const groups = [...new Set(RESTAURANTS.map(restaurant => restaurant.group))];
+  const groups = [...new Set(restaurants.map(restaurant => restaurant.group))];
   const nodes = [];
   for (const group of groups) {
-    const matches = RESTAURANTS.filter(restaurant => restaurant.group === group
+    const matches = restaurants.filter(restaurant => restaurant.group === group
       && `${restaurant.group} ${restaurant.name} ${restaurant.shortName}`.toLocaleLowerCase().includes(search));
     if (!matches.length) continue;
     const details = el('details', 'place-group');
@@ -425,7 +444,7 @@ function showDialog(dialog) {
   requestAnimationFrame(() => window.scrollTo(0, modalScrollY));
 }
 
-for (const dialog of [$('place-picker'), $('simulation')]) dialog.addEventListener('close', () => {
+for (const dialog of [$('place-picker'), $('simulation'), $('connection-report')]) dialog.addEventListener('close', () => {
   allowPastLoad = false;
   window.scrollTo(0, modalScrollY);
 });
@@ -454,42 +473,120 @@ window.addEventListener('touchmove', event => { allowPastLoad = (event.touches[0
 window.addEventListener('keydown', event => { if (['ArrowUp', 'PageUp', 'Home'].includes(event.key)) allowPastLoad = true; }, { passive: true });
 window.addEventListener('pointerdown', event => { allowPastLoad = event.target === document.documentElement; }, { passive: true });
 
-createWeek(currentWeek);
-createWeek(nextWeek);
-render();
-new ResizeObserver(() => {
-  document.documentElement.style.setProperty('--header-height', `${$('app-shell').offsetHeight}px`);
-  renderTicks();
-}).observe($('app-shell'));
-weekObserver = new IntersectionObserver(entries => {
-  for (const entry of entries) {
-    if (entry.isIntersecting) controller.ensureWeek(entry.target.dataset.week);
-    else controller.hideWeek(entry.target.dataset.week);
-  }
-}, { rootMargin: '-220px 0px 120px 0px' });
-for (const { section } of weekNodes.values()) weekObserver.observe(section);
-const sentinelObserver = new IntersectionObserver(entries => {
-  if (initialJump || addingWeek || $('place-picker').open || $('simulation').open) return;
-  for (const entry of entries) {
-    if (!entry.isIntersecting) continue;
-    const weeks = [...weekNodes.keys()].sort();
-    if (entry.target.id === 'future-sentinel') {
-      addingWeek = true;
-      createWeek(addDays(weeks.at(-1), 7));
-      renderSlots();
-      requestAnimationFrame(() => { addingWeek = false; });
-    } else if (allowPastLoad && scrollDirection === 'up') {
-      addingWeek = true;
-      const anchor = weekNodes.get(weeks[0]).section;
-      const before = anchor.getBoundingClientRect().top;
-      createWeek(addDays(weeks[0], -7), true);
-      renderSlots();
-      window.scrollBy(0, anchor.getBoundingClientRect().top - before);
-      requestAnimationFrame(() => { addingWeek = false; });
+function initializeCalendar(preferences = {}) {
+  const selectedIds = (preferences.selectedIds || []).filter(id => restaurants.some(restaurant => restaurant.id === id));
+  if (!selectedIds.length) selectedIds.push(isLive ? restaurants[0].id : 'kooy', ...(!isLive ? ['engineering', 'garden'] : []));
+  model = new PlannerModel({ restaurants, balanceRials: service.balanceRials, selectedIds,
+    activeId: preferences.activeId, drafts: isLive ? [] : preferences.drafts, menus: isLive ? [] : preferences.menus });
+  controller = new PlannerController({ model, service, onChange: render });
+  createWeek(currentWeek);
+  createWeek(nextWeek);
+  render();
+  new ResizeObserver(() => {
+    document.documentElement.style.setProperty('--header-height', `${$('app-shell').offsetHeight}px`);
+    renderTicks();
+  }).observe($('app-shell'));
+  weekObserver = new IntersectionObserver(entries => {
+    for (const entry of entries) {
+      if (entry.isIntersecting) controller.ensureWeek(entry.target.dataset.week);
+      else controller.hideWeek(entry.target.dataset.week);
     }
+  }, { rootMargin: '-220px 0px 120px 0px' });
+  for (const { section } of weekNodes.values()) weekObserver.observe(section);
+  const sentinelObserver = new IntersectionObserver(entries => {
+    if (initialJump || addingWeek || $('place-picker').open || $('simulation').open || $('connection-report').open) return;
+    for (const entry of entries) {
+      if (!entry.isIntersecting) continue;
+      const weeks = [...weekNodes.keys()].sort();
+      if (entry.target.id === 'future-sentinel') {
+        addingWeek = true;
+        createWeek(addDays(weeks.at(-1), 7));
+        renderSlots();
+        requestAnimationFrame(() => { addingWeek = false; });
+      } else if (allowPastLoad && scrollDirection === 'up') {
+        addingWeek = true;
+        const anchor = weekNodes.get(weeks[0]).section;
+        const before = anchor.getBoundingClientRect().top;
+        createWeek(addDays(weeks[0], -7), true);
+        renderSlots();
+        window.scrollBy(0, anchor.getBoundingClientRect().top - before);
+        requestAnimationFrame(() => { addingWeek = false; });
+      }
+    }
+  }, { rootMargin: '-240px 0px 160px 0px' });
+  sentinelObserver.observe($('past-sentinel'));
+  sentinelObserver.observe($('future-sentinel'));
+  controller.ensureWeek(currentWeek, true);
+  requestAnimationFrame(() => requestAnimationFrame(() => { jumpTo(nextWeek); initialJump = false; }));
+}
+
+async function connectDining() {
+  if (connecting) return;
+  connecting = true;
+  $('live-connection').hidden = false;
+  $('connection-message').textContent = 'Connecting and discovering your eligible restaurants…';
+  $('connect-dining').disabled = true;
+  $('live-reconnect').disabled = true;
+  try {
+    if (!await sessionClient.hasPermission() && !await sessionClient.requestPermission()) throw new Error('Allow dining access to connect your browser session.');
+    const connection = await service.connect();
+    if (model && accountTag !== connection.accountTag) {
+      service.writable = false;
+      throw new Error('The signed-in account changed. Open a new Loghmeh tab to start with that account. Your old drafts stay here.');
+    }
+    if (model && model.selectedIds.some(id => !connection.restaurants.some(restaurant => restaurant.id === id))) {
+      service.writable = false;
+      throw new Error('Your eligible restaurants changed. Open a new Loghmeh tab to choose from the updated list. Drafts stay here.');
+    }
+    accountTag = connection.accountTag;
+    restaurants = connection.restaurants;
+    if (!model) {
+      let preferences;
+      try { preferences = JSON.parse(localStorage.getItem('loghmeh:live:palette:v1')); } catch { /* Start with one place. */ }
+      document.body.classList.remove('is-connecting');
+      initializeCalendar(preferences || {});
+    } else {
+      model.balanceRials = connection.balanceRials;
+      model.restaurants = new Map(restaurants.map(restaurant => [restaurant.id, restaurant]));
+      model.loads.clear();
+      for (const [id, state] of model.saves) if (['login-required', 'reconnect-required', 'account-changed'].includes(state.code)) model.saves.delete(id);
+      for (const week of new Set([...controller.visibleWeeks, ...controller.backgroundWeeks])) controller.ensureWeek(week);
+      render();
+    }
+    $('live-reconnect').textContent = 'Live · Refresh';
+    $('live-connection').hidden = connection.writable;
+    $('connection-message').textContent = connection.writeReason;
+  } catch (error) {
+    $('connection-message').textContent = error.message;
+    $('connect-dining').textContent = 'Reconnect dining';
+    $('live-reconnect').textContent = 'Reconnect dining';
+  } finally {
+    connecting = false;
+    $('connect-dining').disabled = false;
+    $('live-reconnect').disabled = false;
   }
-}, { rootMargin: '-240px 0px 160px 0px' });
-sentinelObserver.observe($('past-sentinel'));
-sentinelObserver.observe($('future-sentinel'));
-controller.ensureWeek(currentWeek, true);
-requestAnimationFrame(() => requestAnimationFrame(() => { jumpTo(nextWeek); initialJump = false; }));
+}
+
+$('connect-dining').addEventListener('click', connectDining);
+$('live-reconnect').addEventListener('click', connectDining);
+$('open-dining-login').addEventListener('click', () => sessionClient?.openLogin());
+$('live-report-button').addEventListener('click', () => {
+  $('live-report-json').value = JSON.stringify(service.connectionReport(), null, 2);
+  showDialog($('connection-report'));
+});
+$('close-report').addEventListener('click', () => $('connection-report').close());
+window.addEventListener('beforeunload', event => {
+  if (isLive && model?.changes().length) { event.preventDefault(); event.returnValue = ''; }
+});
+if (isLive) {
+  document.body.classList.add('is-connecting');
+  $('open-simulation').hidden = true;
+  $('live-reconnect').hidden = false;
+  $('live-report-button').hidden = false;
+  $('mode-link').hidden = false;
+  $('data-notice').textContent = 'Live university data · One reservation tab at a time · Pending amounts are estimates.';
+  connectDining();
+} else {
+  if (isExtension) { $('mode-link').hidden = false; $('mode-link').href = 'planner.html'; $('mode-link').textContent = 'Connect dining'; }
+  initializeCalendar(saved?.model || {});
+}
