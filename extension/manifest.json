@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Loghmeh",
-  "version": "0.4.1",
+  "version": "0.5.0",
   "description": "Plan meals across your usual University of Tehran restaurants using your existing browser login. Includes an offline sample mode.",
   "host_permissions": [
     "https://dining2.ut.ac.ir/*"

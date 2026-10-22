@@ -189,7 +189,7 @@ test('the UI controller adopts partial live results and retains only the unaccep
   const connection = await service.connect();
   const model = new PlannerModel({ restaurants: connection.restaurants, balanceRials: connection.balanceRials, selectedIds: ['10:20'], activeId: '10:20' });
   const controller = new PlannerController({ model, service });
-  controller.ensureWeek(next);
+  controller.showWeek(next);
   await controller.idle();
   const choices = [...model.menus.values()][0].choices;
   for (const choice of choices) model.setDesired(choice, true);

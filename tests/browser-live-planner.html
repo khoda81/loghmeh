@@ -4,15 +4,15 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Loghmeh · your week, a little easier</title>
-  <link rel="icon" href="/extension/icon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/extension/planner.css">
-  <script type="module" src="/tests/browser-live-planner.mjs"></script>
+  <link rel="icon" href="../extension/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../extension/planner.css">
+  <script type="module" src="browser-live-planner.mjs"></script>
 </head>
 <body>
   <header class="app-shell" id="app-shell">
     <div class="topbar">
-      <a class="brand" href="planner.html"><img src="/extension/icon.svg" width="30" height="30" alt=""><span>loghmeh <span lang="fa">لقمه</span></span></a>
-      <div class="topbar-actions"><a href="probe.html">Connection probe</a><a id="mode-link" href="planner.html?demo=1" hidden>Sample menus</a><button id="live-report-button" class="live-label" hidden>Report</button><button id="live-reconnect" class="live-label" hidden>Connect dining</button><button id="open-simulation" class="demo-label">Interactive demo <span class="demo-dot"></span></button></div>
+      <a class="brand" href="../extension/planner.html"><img src="../extension/icon.svg" width="30" height="30" alt=""><span>loghmeh <span lang="fa">لقمه</span></span></a>
+      <div class="topbar-actions"><a href="../extension/probe.html">Connection probe</a><a id="mode-link" href="../extension/planner.html?demo=1" hidden>Sample menus</a><button id="live-report-button" class="live-label" hidden>Report</button><button id="live-reconnect" class="live-label" hidden>Connect dining</button><button id="open-simulation" class="demo-label">Interactive demo <span class="demo-dot"></span></button></div>
     </div>
     <div id="live-connection" class="live-connection" role="status" hidden><p id="connection-message">Connecting to your dining session…</p><div><button id="connect-dining" class="plain-primary">Connect dining</button><button id="open-dining-login" class="undo-button">Open dining login</button></div></div>
     <div class="wallet">
@@ -31,18 +31,16 @@
     </div>
     <div class="calendar-toolbar">
       <p class="brush-hint"><span id="brush-dot" class="color-dot"></span><span id="brush-name" dir="auto"></span><span class="muted">is your brush. Hover a slot, then click a food.</span></p>
-      <nav aria-label="Jump to week"><button id="jump-current">This week</button><button id="jump-next" class="is-current">Next week</button></nav>
+      <nav class="week-navigation" aria-label="Calendar week"><button id="week-previous" aria-label="Previous week" title="Previous week">←</button><button id="jump-current" aria-pressed="false">This week</button><button id="week-next" aria-label="Next week" title="Next week">→</button></nav>
     </div>
-    <div class="today-strip"><span class="today-label" id="today-label">Today</span><div id="today-reservations">Finding today’s meals…</div><span class="autosave-hint">Saves when you change restaurant</span></div>
+    <div class="today-strip" id="today-strip" hidden><span class="today-label" id="today-label">Today</span><div id="today-reservations">Finding today’s meals…</div><span class="autosave-hint">Saves when you change restaurant</span></div>
   </header>
 
   <main class="calendar-main">
     <div id="planner-warning" class="planner-warning" role="alert" hidden></div>
     <div class="calendar-heading"><h1>A week well fed.</h1><span id="coverage">Checking your places…</span></div>
-    <div id="past-sentinel" class="scroll-sentinel" aria-hidden="true"></div>
     <div id="weeks" class="weeks"></div>
-    <div id="future-sentinel" class="scroll-sentinel" aria-hidden="true"></div>
-    <footer class="calendar-footer"><span>Keep scrolling for more weeks.</span><span id="data-notice">Sample menus · Your university reservations are untouched.</span></footer>
+    <footer class="calendar-footer"><span>One week at a time · Saves when you change restaurant.</span><span id="data-notice">Sample menus · Your university reservations are untouched.</span></footer>
   </main>
 
   <dialog id="place-picker" aria-labelledby="place-title">

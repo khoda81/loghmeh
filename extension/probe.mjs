@@ -6,7 +6,7 @@ const api = globalThis.browser ?? globalThis.chrome;
 const isExtension = ['moz-extension:', 'chrome-extension:'].includes(location.protocol);
 const client = isExtension ? createExtensionClient(api)
   : (await import('./demo.mjs')).createDemoClient(new URLSearchParams(location.search).get('scenario'));
-const report = { app: 'Loghmeh', version: isExtension ? api.runtime.getManifest().version : '0.4.1', environment: client.mode, sessionVerified: false, menuVerified: false, checks: [] };
+const report = { app: 'Loghmeh', version: isExtension ? api.runtime.getManifest().version : '0.5.0', environment: client.mode, sessionVerified: false, menuVerified: false, checks: [] };
 let busy = false;
 let permission = false;
 let connected = false;

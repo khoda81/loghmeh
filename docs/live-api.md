@@ -1,6 +1,6 @@
 # Live dining integration
 
-Version 0.4.1. Loghmeh uses Firefox's existing dining session. It does not
+Version 0.5.0. Loghmeh uses Firefox's existing dining session. It does not
 implement SSO, request a password, export cookies, or run a proxy server.
 
 ## Endpoints
@@ -28,13 +28,17 @@ There is one server week cursor, rather than a date-addressed menu API. The
 background session serializes discovery, menu reads, cursor navigation, saves,
 and read-back across all Loghmeh tabs. It derives dates from the returned
 seven-day Persian header, verifies consecutive Saturday-first days, and checks
-every navigation step. Only selected restaurants are loaded. UI requests for
-visible weeks take precedence over the current-week background scan.
+every navigation step. Only selected restaurants and the single active calendar
+week are loaded. There is no prefetch or current-week background scan. Changing
+weeks cancels obsolete queued reads; an already-running read finishes and is
+cached. Returning to a loaded week uses its in-tab snapshot. Refresh reloads
+only the active week. Week navigation preserves drafts without submitting them;
+restaurant changes and Submit retain their existing submission behavior.
 
 A menu read starts by asking for the session's selected week. If already at
 the target it does not advance again. Large cursor distances reset to current
 week before bounded navigation; a request never walks more than eight weeks.
-The calendar can scroll further, but those loads return a range error. Empty
+The week controls can navigate further, but those loads return a range error. Empty
 responses do not prove a publication status, so live slots say "No food returned".
 
 The original website and other clients do not participate in this queue.
@@ -99,7 +103,7 @@ account identifiers, wallet identifiers, and raw server HTML.
 
 ## Verification
 
-- 46 Node tests cover transport boundaries, the shared queue, exact opaque
+- 50 Node tests cover transport boundaries, the shared queue, exact opaque
   serialization, cursor validation, business rejection, lost-response
   reconciliation, partial success, changed accounts/prices/quantities, and
   the existing planner and signed ledger behavior.

@@ -4,7 +4,7 @@ A calmer meal planner for University of Tehran dining. Pick your usual
 restaurants as colors, preview foods inside a weekly calendar, and keep your
 choices when the server rejects a request.
 
-Independent, unofficial Firefox / Zen extension. **Version 0.4.1 · MIT.**
+Independent, unofficial Firefox / Zen extension. **Version 0.5.0 · MIT.**
 
 ![The weekly planner with fictional menus and pending balance changes](docs/assets/planner-demo.jpg)
 
@@ -29,13 +29,18 @@ The only host permission is `https://dining2.ut.ac.ir/*`.
 
 ## What it does
 
-- Scroll Saturday-first weeks, with Jalali and Gregorian dates and today in
-  Asia/Tehran. Menus arrive incrementally, with a status for each restaurant.
-- Check current reservations while planning next week. Coverage refers to
-  your selected places; Loghmeh does not claim to have scanned every place.
-- See known paid food below zero and available balance above zero. Pending
+- View one Saturday-first week, with previous/next controls, Jalali and
+  Gregorian dates, and today in Asia/Tehran. Only that week is requested for
+  selected restaurants; menus arrive incrementally beside their loading pills.
+  Returning to a loaded week reuses its snapshot in the open tab.
+- Use **This week** to see current reservations. Coverage refers to your selected
+  places; Loghmeh does not claim to have scanned every place. No other week is
+  scanned in the background.
+- See known paid value below zero and available balance above zero on the ruler. Pending
   spending and refunds use opposite hatching. Pending amounts are estimates;
-  confirmed balances come from dining. Amounts are displayed in toman.
+  confirmed balances come from dining. Food segments follow date, meal, place,
+  and food order, with pending cancellations hatched in place until confirmed.
+  The bar includes known reservations from visited weeks. Amounts use toman.
 - Submit by restaurant. A rejected or uncertain request keeps its draft.
   Read-back checks what was actually accepted, including partial success.
 - Reuse your normal browser login. Loghmeh does not ask for passwords, export
@@ -65,7 +70,11 @@ Version 0.4.1 adds automatic recovery of a lost background connection handle.
 The real change was made by the user in Zen. No disposable reservation was
 created by the implementation tests.
 
-There are 46 passing Node tests and 20 passing browser parser checks. The
+Version 0.5.0's single-week navigation, incremental loading, cached return,
+active-week refresh, and chronological balance hatches were checked in the
+browser against fictional HTTP responses. [UI verification notes](docs/verification/ui-0.5.0.md).
+
+There are 50 passing Node tests and 20 passing browser parser checks. The
 write serializer and reconciliation logic are tested with fictional HTTP
 responses; one live change is verified. General refund behavior and batch
 atomicity remain unverified. See
@@ -95,7 +104,7 @@ Useful local checks:
 - `/tests/browser-mobile.html` — 390px responsive preview.
 - `/extension/probe.html` — the separate read-only connection probe.
 
-`npm run package` builds `dist/loghmeh-0.4.1.zip`, also loadable as a temporary
+`npm run package` builds `dist/loghmeh-0.5.0.zip`, also loadable as a temporary
 add-on. Packages contain `extension/` and the MIT license. Captures, outputs, private checks,
 and local credentials are ignored and excluded.
 

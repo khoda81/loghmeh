@@ -1,12 +1,19 @@
 # Next UI pass
 
 The live adapter is connected and one real change is verified in Zen. These
-requested refinements were held while testing the actual API:
+refinements are now in 0.5.0:
+
+- One active week with previous/next controls. Only that week is fetched for
+  selected restaurants, with queued reads canceled when leaving it.
+- No idle Ready/Saved pill labels or repeated restaurant/Reserved labels in
+  calendar cards. Full restaurant names remain in tooltips and accessible names.
+- Reservation bars follow date, meal, restaurant, and food order, independently
+  of the active brush or save order. Pending removals hatch in place and their
+  space collapses on confirmation.
+
+Still open from the earlier interaction ideas:
 
 - Remove a conflicting food directly without first changing the active brush.
-- Order reservation bars by date, with a stable meal/place/food tie-breaker.
-- Hatch a pending removal at its existing position. On confirmation collapse
-  that space in place; pending removals do not need to sit beside zero.
 - Clicking a reservation bar selects its restaurant. An already-selected bar
   exposes an accessible remove control.
 

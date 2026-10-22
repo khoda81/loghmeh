@@ -7,8 +7,7 @@ export class PlannerController {
     this.onChange = onChange;
     this.queue = [];
     this.running = null;
-    this.visibleWeeks = new Set();
-    this.backgroundWeeks = new Set();
+    this.activeWeek = null;
     this.saveJobs = new Map();
     this.saveAgain = new Set();
     this.message = '';
@@ -25,8 +24,7 @@ export class PlannerController {
 
   async pump() {
     if (this.running || !this.queue.length) return;
-    const priority = task => task.kind === 'save' ? 0
-      : (this.visibleWeeks.has(task.week) ? 1 : 3) + (task.restaurantId === this.model.activeId ? 0 : 1);
+    const priority = task => task.kind === 'save' ? 0 : task.restaurantId === this.model.activeId ? 1 : 2;
     this.queue.sort((a, b) => priority(a) - priority(b) || a.sequence - b.sequence);
     const task = this.queue.shift();
     this.running = task;
@@ -38,26 +36,26 @@ export class PlannerController {
     }
   }
 
-  ensureWeek(week, background = false) {
-    if (background) this.backgroundWeeks.add(week); else this.visibleWeeks.add(week);
+  showWeek(week) {
+    this.activeWeek = week;
+    this.cancelReads(task => task.week !== week);
     for (const id of [this.model.activeId, ...this.model.selectedIds.filter(id => id !== this.model.activeId)]) {
       if (id) this.load(id, week);
     }
+    this.changed();
   }
 
-  hideWeek(week) {
-    this.visibleWeeks.delete(week);
-    if (this.backgroundWeeks.has(week)) return;
-    const obsolete = this.queue.filter(task => task.kind === 'read' && task.week === week);
+  cancelReads(matches) {
+    const obsolete = this.queue.filter(task => task.kind === 'read' && matches(task));
     this.queue = this.queue.filter(task => !obsolete.includes(task));
     for (const task of obsolete) {
-      this.model.loads.delete(menuKey(task.restaurantId, week));
+      this.model.loads.delete(menuKey(task.restaurantId, task.week));
       task.resolve();
     }
-    if (obsolete.length) this.changed();
   }
 
   load(restaurantId, week, retry = false) {
+    if (week !== this.activeWeek || !this.model.selectedIds.includes(restaurantId)) return;
     const key = menuKey(restaurantId, week);
     const previous = this.model.loads.get(key);
     if (previous && (!retry || previous.state !== 'error')) return;
@@ -85,7 +83,7 @@ export class PlannerController {
     const previous = this.model.activeId;
     if (previous && this.model.changes(previous).length) this.submit(previous);
     this.model.activeId = restaurantId;
-    for (const week of new Set([...this.visibleWeeks, ...this.backgroundWeeks])) this.load(restaurantId, week);
+    if (this.activeWeek) this.load(restaurantId, this.activeWeek);
     this.changed();
   }
 
@@ -93,7 +91,7 @@ export class PlannerController {
     if (!this.model.restaurants.has(restaurantId)) return;
     if (!this.model.selectedIds.includes(restaurantId)) this.model.selectedIds.push(restaurantId);
     this.select(restaurantId);
-    for (const week of new Set([...this.visibleWeeks, ...this.backgroundWeeks])) this.load(restaurantId, week);
+    if (this.activeWeek) this.load(restaurantId, this.activeWeek);
     this.changed();
   }
 
@@ -104,6 +102,7 @@ export class PlannerController {
       return false;
     }
     this.model.selectedIds = this.model.selectedIds.filter(id => id !== restaurantId);
+    this.cancelReads(task => task.restaurantId === restaurantId);
     if (this.model.activeId === restaurantId) this.model.activeId = this.model.selectedIds[0];
     this.changed();
     return true;
@@ -178,7 +177,7 @@ export class PlannerController {
 
   retry(restaurantId) {
     if (this.model.changes(restaurantId).length) this.submit(restaurantId);
-    for (const load of this.model.loads.values()) if (load.restaurantId === restaurantId && load.state === 'error') this.load(restaurantId, load.week, true);
+    if (this.activeWeek) this.load(restaurantId, this.activeWeek, true);
   }
 
   async idle() {

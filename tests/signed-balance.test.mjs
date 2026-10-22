@@ -4,7 +4,7 @@ import { PlannerModel } from '../extension/lib/planner-model.mjs';
 import { SignedBalanceLedger, signedBalanceTicks } from '../extension/lib/signed-balance.mjs';
 
 const food = (id, priceRials, restaurantId = 'a', week = '2026-10-24') => ({
-  id, name: id, restaurantId, week, date: week, mealId: id, priceRials, locked: false,
+  id, name: id, restaurantId, week, date: week, mealId: '1', priceRials, locked: false,
 });
 function setup(confirmed = [], balanceRials = 1000) {
   const model = new PlannerModel({ restaurants: ['a', 'b', 'c'].map(id => ({ id })), balanceRials,
@@ -34,6 +34,21 @@ test('known paid reservations occupy the negative side without charging them twi
   assert.equal(view.zeroFraction, 300 / 1300);
 });
 
+test('dates sort first, followed by meal, restaurant, and food for stable ties', () => {
+  const choices = [
+    { ...food('earliest', 100, 'c'), date: '2026-10-23', mealId: '3' },
+    food('a-food', 100), food('z-food', 100), food('b-food', 100, 'b'),
+    { ...food('dinner', 100), mealId: '3' },
+    { ...food('latest', 100), date: '2026-10-25' },
+  ];
+  const { model, ledger } = setup([...choices].reverse());
+  const original = ledger.update(model);
+  assert.deepEqual(original.segments.map(entry => entry.choice.id), choices.map(choice => choice.id));
+  model.activeId = 'b';
+  model.setDesired(choices[1], false);
+  stationary(original, ledger.update(model));
+});
+
 test('a confirmed purchase keeps every food rectangle fixed while zero and the round ruler move', () => {
   const { model, ledger } = setup([food('old', 300)]);
   ledger.update(model);
@@ -55,17 +70,23 @@ test('a confirmed purchase keeps every food rectangle fixed while zero and the r
   assert.equal(laterZero.fraction - earlierZero.fraction, 200 / 1300);
 });
 
-test('removing a middle reservation hatches it until refund, without moving surviving bars on commit', () => {
-  const { model, ledger } = setup([food('first', 100), food('middle', 200), food('last', 300)]);
-  ledger.update(model);
+test('a pending removal hatches in date order, then its space collapses on confirmation', () => {
+  const first = food('first', 100);
+  const middle = { ...food('middle', 200), date: '2026-10-25' };
+  const last = { ...food('last', 300), date: '2026-10-26' };
+  const { model, ledger } = setup([last, first, middle]);
+  const original = ledger.update(model);
   model.setDesired(model.confirmed.get('middle'), false);
   const before = ledger.update(model);
   assert.equal(before.recoveryRials, 200);
   assert.equal(segment(before, 'middle').state, 'removing');
-  assert.equal(segment(before, 'middle').endRials, before.reservedRials);
+  stationary(original, before);
+  assert.deepEqual(rectangle(segment(before, 'middle')), [100, 300, 'full']);
   complete(model, model.capture('a'));
   const after = ledger.update(model);
-  stationary(before, after);
+  assert.equal(after.extentRials, before.extentRials);
+  assert.deepEqual(rectangle(segment(after, 'first')), [0, 100, 'full']);
+  assert.deepEqual(rectangle(segment(after, 'last')), [100, 400, 'full']);
   assert.equal(segment(after, 'middle'), undefined);
   assert.equal(after.balanceRials, 1200);
   assert.equal(after.reservedRials, 400);
@@ -81,17 +102,18 @@ test('replacements expose gross spending and recovery, including equal-price swa
     const before = ledger.update(model);
     assert.equal(before.spendingRials, price);
     assert.equal(before.recoveryRials, 300);
-    assert.deepEqual(rectangle(segment(before, 'old')), [0, 300, 'release']);
-    assert.deepEqual(rectangle(segment(before, 'replacement')), [0, price, 'purchase']);
+    assert.deepEqual(rectangle(segment(before, 'old')), [0, 300, 'full']);
+    assert.deepEqual(rectangle(segment(before, 'replacement')), [300, 300 + price, 'full']);
     complete(model, model.capture('a'));
     const after = ledger.update(model);
-    stationary(before, after);
+    assert.equal(after.extentRials, before.extentRials);
+    assert.deepEqual(rectangle(segment(after, 'replacement')), [0, price, 'full']);
     assert.equal(after.reservedRials, price);
     assert.equal(after.balanceRials, 1300 - price);
   }
 });
 
-test('partial saves follow restaurant and week order; surviving bars stay below zero after each confirmation', () => {
+test('chronological bars ignore brush and save order, including partial confirmations across weeks', () => {
   const week2 = '2026-10-31';
   const oldA = food('old-a', 300), laterA = food('old-a-later', 200, 'a', week2), oldB = food('old-b', 400, 'b');
   const { model, ledger } = setup([oldA, laterA, oldB]);
@@ -101,12 +123,17 @@ test('partial saves follow restaurant and week order; surviving bars stay below 
   const a = model.capture('a');
   const b = model.capture('b');
   let before = ledger.update(model);
-  assert.equal(segment(before, 'old-b').startRials, 0);
+  const chronologicalIds = ['new-a', 'old-a', 'new-b', 'old-b', 'new-a-later', 'old-a-later'];
+  assert.deepEqual(before.segments.map(entry => entry.choice.id), chronologicalIds);
+  model.activeId = 'c';
+  stationary(before, ledger.update(model));
   for (const batch of [a.filter(draft => draft.choice.week !== week2), a.filter(draft => draft.choice.week === week2), b]) {
     complete(model, batch);
     const after = ledger.update(model);
-    stationary(before, after);
-    for (const entry of after.segments.filter(entry => entry.state !== 'adding')) assert.ok(entry.endRials <= after.reservedRials, entry.choice.id);
+    assert.equal(after.extentRials, before.extentRials);
+    const remaining = new Set(after.segments.map(entry => entry.choice.id));
+    assert.deepEqual(after.segments.map(entry => entry.choice.id), chronologicalIds.filter(id => remaining.has(id)));
+    for (let i = 1; i < after.segments.length; i++) assert.equal(after.segments[i].startRials, after.segments[i - 1].endRials);
     before = after;
   }
   assert.equal(before.segments.length, 3);

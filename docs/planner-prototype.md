@@ -4,6 +4,14 @@ This records the 0.3.0 prototype, 2026-10-22, which uses fictional data.
 Version 0.4.0 adds the separate [live API adapter](live-api.md); the localhost
 preview and explicit sample mode still use this simulation.
 
+The interaction details below describe that earlier prototype. Version 0.5.0
+replaces infinite scrolling with one active week and previous/next controls,
+removes the background Today scan, and orders balance segments chronologically.
+Pending cancellations stay in place until confirmation closes their space.
+Pills no longer show idle status text, and calendar cards use restaurant color
+with full names retained in tooltips and accessible labels. Current behavior is
+summarized in the [README](../README.md) and [live integration](live-api.md).
+
 ## Interaction
 
 The sticky toolbar contains a balance bar, restaurant color pills, a nested

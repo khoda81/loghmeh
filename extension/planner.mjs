@@ -5,7 +5,7 @@ import { PlannerController } from './lib/planner-controller.mjs';
 import { LiveDiningService } from './lib/planner-live.mjs';
 import { createExtensionClient } from './lib/client.mjs';
 
-// The calendar restores a week explicitly; browser scroll restoration must not race it.
+// Week navigation owns the calendar position.
 history.scrollRestoration = 'manual';
 
 const $ = id => document.getElementById(id);
@@ -32,6 +32,7 @@ let model;
 let controller;
 let accountTag;
 let connecting = false;
+let activeWeek = nextWeek;
 const faDate = new Intl.DateTimeFormat('fa-IR', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
 const shortFaDate = new Intl.DateTimeFormat('fa-IR', { day: 'numeric', month: 'short', timeZone: 'UTC' });
 const englishDate = new Intl.DateTimeFormat('en', { day: 'numeric', month: 'short', timeZone: 'UTC' });
@@ -48,14 +49,7 @@ const tickNodes = new Map();
 let ledgerView;
 let toastTimer;
 let lastMessage = '';
-let weekObserver;
-let scrollDirection = 'down';
-let lastScroll = window.scrollY;
-let addingWeek = false;
-let initialJump = true;
-let allowPastLoad = false;
 let modalScrollY = 0;
-let touchY = 0;
 
 function persist() {
   try {
@@ -67,15 +61,16 @@ function persist() {
 
 function statusFor(id) {
   const save = model.saves.get(id);
-  const loads = [...model.loads.values()].filter(load => load.restaurantId === id);
+  const loads = [...model.loads.values()].filter(load => load.restaurantId === id && load.week === activeWeek);
   const pending = loads.filter(load => ['queued', 'loading'].includes(load.state));
   const count = model.changes(id).length;
   if (save?.state === 'error') return { text: 'Not saved', error: true, title: save.message };
   if (['queued', 'saving'].includes(save?.state)) return { text: save.state === 'queued' ? 'Save queued' : 'Saving…', busy: true };
   if (loads.some(load => load.state === 'error')) return { text: 'Load failed', error: true, title: 'Retry the menu request.' };
-  if (pending.length) return { text: `${pending.some(load => load.state === 'loading') ? 'Loading' : 'Queued'}${count ? ` · ${count} ${count === 1 ? 'change' : 'changes'}` : '…'}`, busy: true };
+  if (pending.length) return { text: count ? `${count} ${count === 1 ? 'change' : 'changes'}` : '', busy: true,
+    title: pending.some(load => load.state === 'loading') ? 'Loading this week’s menu' : 'This week’s menu is queued' };
   if (count) return { text: `${count} ${count === 1 ? 'change' : 'changes'}` };
-  return { text: save?.state === 'saved' ? 'Saved' : 'Ready' };
+  return { text: '' };
 }
 
 function renderPalette() {
@@ -89,8 +84,8 @@ function renderPalette() {
     button.dataset.restaurantId = id;
     button.dataset.focusKey = `place-${id}`;
     button.setAttribute('aria-pressed', String(id === model.activeId));
-    button.setAttribute('aria-label', `${restaurant.name} · ${status.text}`);
-    button.title = status.title || restaurant.name;
+    button.setAttribute('aria-label', [restaurant.name, status.text || status.title].filter(Boolean).join(' · '));
+    button.title = [restaurant.name, status.title].filter(Boolean).join('\n');
     button.append(el('span', status.busy ? 'spinner' : 'color-dot'), el('span', 'pill-name', restaurant.shortName),
       el('span', `pill-status${status.error ? ' error' : ''}`, status.text));
     button.addEventListener('click', () => controller.select(id));
@@ -124,6 +119,7 @@ function renderPalette() {
   const active = model.restaurants.get(model.activeId);
   document.documentElement.style.setProperty('--active-color', active.color);
   $('brush-name').textContent = active.shortName;
+  $('brush-name').title = active.name;
   $('brush-dot').style.setProperty('--restaurant-color', active.color);
 }
 
@@ -154,10 +150,12 @@ function renderBalance() {
     segment.style.setProperty('--restaurant-color', restaurant.color);
     segment.style.left = `${startRials / extentRials * 100}%`;
     segment.style.width = `${(endRials - startRials) / extentRials * 100}%`;
+    segment.dataset.date = choice.date;
     const status = state === 'adding' ? 'Pending food' : state === 'removing' ? 'Pending refund' : 'Reserved';
-    segment.title = `${restaurant.shortName} · ${choice.name} · ${money(choice.priceRials)} toman · ${status}${isLive && state !== 'reserved' ? ' (estimate)' : ''}`;
+    segment.title = `${choice.date} · ${mealName(choice.mealId)} · ${restaurant.name} · ${choice.name} · ${money(choice.priceRials)} toman · ${status}${isLive && state !== 'reserved' ? ' (estimate)' : ''}`;
   }
   for (const [id, node] of segmentNodes) if (!keep.has(id)) { node.remove(); segmentNodes.delete(id); }
+  $('balance-segments').replaceChildren(...ledgerView.segments.map(entry => segmentNodes.get(entry.choice.id)));
   $('balance-zero').style.left = `${zeroFraction * 100}%`;
   $('balance-cash').style.left = `${zeroFraction * 100}%`;
   $('balance-track').classList.toggle('over-budget', projected < 0);
@@ -192,8 +190,7 @@ function renderTicks() {
   for (const [value, node] of tickNodes) if (!keep.has(value)) { node.remove(); tickNodes.delete(value); }
 }
 
-function createWeek(week, prepend = false) {
-  if (weekNodes.has(week)) return weekNodes.get(week);
+function createWeek(week) {
   const section = el('section', 'week');
   section.dataset.week = week;
   section.setAttribute('aria-label', `Week of ${englishDate.format(asDate(week))}`);
@@ -227,10 +224,10 @@ function createWeek(week, prepend = false) {
   }
   scroll.append(grid);
   section.append(heading, scroll);
-  if (prepend) $('weeks').prepend(section); else $('weeks').append(section);
+  $('weeks').replaceChildren(section);
   const entry = { section, slots };
+  weekNodes.clear();
   weekNodes.set(week, entry);
-  weekObserver?.observe(section);
   return entry;
 }
 
@@ -242,10 +239,8 @@ function card(choice, removing = false) {
   const node = el('div', `food-card${draft ? ' is-draft' : ''}${removing ? ' is-removing' : ''}`);
   node.style.setProperty('--restaurant-color', restaurant.color);
   node.dataset.choiceId = choice.id;
-  const top = el('div', 'food-card-top');
-  const name = el('span', 'food-card-place', restaurant.shortName);
-  name.dir = 'auto';
-  top.append(name);
+  node.title = restaurant.name;
+  node.setAttribute('aria-label', `${choice.name} · ${restaurant.name}`);
   if (!choice.locked && !removing) {
     const remove = el('button', 'card-remove', '×');
     remove.setAttribute('aria-label', `Remove ${choice.name}`);
@@ -254,15 +249,16 @@ function card(choice, removing = false) {
       else controller.select(choice.restaurantId);
       controller.removeChoice(choice);
     });
-    top.append(remove);
+    node.append(remove);
   }
   const food = el('span', 'food-name', choice.name);
   food.dir = 'rtl';
   food.title = choice.name;
   const bottom = el('div', 'food-card-bottom');
-  const state = failed ? 'Not saved' : saving ? 'Saving…' : removing ? 'Cancel pending' : draft ? 'Draft' : choice.locked ? 'Reserved · Locked' : 'Reserved';
-  bottom.append(el('span', '', `${money(choice.priceRials)} t`), el('span', draft ? 'draft-state' : '', state));
-  node.append(top, food, bottom);
+  const state = failed ? 'Not saved' : saving ? 'Saving…' : removing ? 'Cancel pending' : draft ? 'Draft' : choice.locked ? 'Locked' : '';
+  bottom.append(el('span', '', `${money(choice.priceRials)} t`));
+  if (state) bottom.append(el('span', draft ? 'draft-state' : '', state));
+  node.append(food, bottom);
   return node;
 }
 
@@ -337,6 +333,8 @@ function renderSlots() {
 }
 
 function renderToday() {
+  $('today-strip').hidden = activeWeek !== currentWeek;
+  if (activeWeek !== currentWeek) return;
   $('today-label').textContent = `Today · ${weekday.format(asDate(today))}`;
   const bookings = model.bookings().filter(choice => choice.date === today && model.confirmed.has(choice.id));
   const nodes = bookings.map(choice => {
@@ -346,16 +344,17 @@ function renderToday() {
     node.append(el('span', 'color-dot'), el('span', '', `${mealName(choice.mealId)} · ${restaurant.shortName} · ${choice.name}`));
     return node;
   });
-  if (!nodes.length) nodes.push(el('span', '', [...model.loads.values()].some(load => load.week === currentWeek && load.state !== 'ready')
-    ? 'Checking today’s reservations…' : 'No reservations found in your checked places.'));
+  const loads = model.selectedIds.map(id => model.loads.get(menuKey(id, currentWeek)));
+  if (!nodes.length) nodes.push(el('span', '', loads.some(load => !load || ['queued', 'loading'].includes(load.state))
+    ? 'Checking today’s reservations…' : loads.some(load => load.state === 'error') ? 'Some places could not be checked.'
+      : 'No reservations found in your checked places.'));
   const checked = model.selectedIds.filter(id => model.loads.get(menuKey(id, currentWeek))?.state === 'ready').length;
   if (checked < model.selectedIds.length) nodes.push(el('span', 'muted', `${checked}/${model.selectedIds.length} places checked`));
   $('today-reservations').replaceChildren(...nodes);
 }
 
 function renderCoverage() {
-  const week = [...controller.visibleWeeks].sort().find(item => item >= currentWeek) || currentWeek;
-  const ready = model.selectedIds.filter(id => model.loads.get(menuKey(id, week))?.state === 'ready').length;
+  const ready = model.selectedIds.filter(id => model.loads.get(menuKey(id, activeWeek))?.state === 'ready').length;
   $('coverage').textContent = `${ready} of ${model.selectedIds.length} places checked · Chosen places only`;
 }
 
@@ -428,24 +427,22 @@ function renderPlacePicker() {
   $('selected-place-count').textContent = `${model.selectedIds.length} restaurants in your palette`;
 }
 
-function jumpTo(week) {
-  allowPastLoad = false;
+function showWeek(week) {
+  if (week === activeWeek && weekNodes.has(week)) return;
+  activeWeek = week;
   createWeek(week);
-  renderSlots();
-  weekNodes.get(week).section.scrollIntoView({ behavior: 'auto', block: 'start' });
-  $('jump-current').classList.toggle('is-current', week === currentWeek);
-  $('jump-next').classList.toggle('is-current', week === nextWeek);
+  $('jump-current').setAttribute('aria-pressed', String(week === currentWeek));
+  controller.showWeek(week);
+  render();
 }
 
 function showDialog(dialog) {
-  allowPastLoad = false;
   modalScrollY = window.scrollY;
   dialog.showModal();
   requestAnimationFrame(() => window.scrollTo(0, modalScrollY));
 }
 
 for (const dialog of [$('place-picker'), $('simulation'), $('connection-report')]) dialog.addEventListener('close', () => {
-  allowPastLoad = false;
   window.scrollTo(0, modalScrollY);
 });
 
@@ -455,23 +452,15 @@ $('add-place').addEventListener('click', () => { renderPlacePicker(); showDialog
 $('close-places').addEventListener('click', () => $('place-picker').close());
 $('done-places').addEventListener('click', () => $('place-picker').close());
 $('place-search').addEventListener('input', renderPlacePicker);
-$('jump-current').addEventListener('click', () => { jumpTo(currentWeek); });
-$('jump-next').addEventListener('click', () => { jumpTo(nextWeek); });
+$('jump-current').addEventListener('click', () => showWeek(currentWeek));
+$('week-previous').addEventListener('click', () => showWeek(addDays(activeWeek, -7)));
+$('week-next').addEventListener('click', () => showWeek(addDays(activeWeek, 7)));
 $('open-simulation').addEventListener('click', () => { showDialog($('simulation')); });
 $('close-simulation').addEventListener('click', () => $('simulation').close());
 $('request-speed').addEventListener('change', event => { service.delayMs = Number(event.target.value); });
 $('fail-save').addEventListener('change', event => { service.failNextSave = event.target.checked; });
 $('fail-read').addEventListener('change', event => { service.failNextRead = event.target.checked; });
 $('reset-demo').addEventListener('click', () => { localStorage.removeItem(storageKey); window.location.reload(); });
-window.addEventListener('scroll', () => {
-  if (window.scrollY !== lastScroll) scrollDirection = window.scrollY < lastScroll ? 'up' : 'down';
-  lastScroll = window.scrollY;
-}, { passive: true });
-window.addEventListener('wheel', event => { allowPastLoad = event.deltaY < 0; }, { passive: true });
-window.addEventListener('touchstart', event => { touchY = event.touches[0]?.clientY || 0; }, { passive: true });
-window.addEventListener('touchmove', event => { allowPastLoad = (event.touches[0]?.clientY || 0) > touchY; }, { passive: true });
-window.addEventListener('keydown', event => { if (['ArrowUp', 'PageUp', 'Home'].includes(event.key)) allowPastLoad = true; }, { passive: true });
-window.addEventListener('pointerdown', event => { allowPastLoad = event.target === document.documentElement; }, { passive: true });
 
 function initializeCalendar(preferences = {}) {
   const selectedIds = (preferences.selectedIds || []).filter(id => restaurants.some(restaurant => restaurant.id === id));
@@ -479,45 +468,12 @@ function initializeCalendar(preferences = {}) {
   model = new PlannerModel({ restaurants, balanceRials: service.balanceRials, selectedIds,
     activeId: preferences.activeId, drafts: isLive ? [] : preferences.drafts, menus: isLive ? [] : preferences.menus });
   controller = new PlannerController({ model, service, onChange: render });
-  createWeek(currentWeek);
-  createWeek(nextWeek);
-  render();
+  createWeek(activeWeek);
+  controller.showWeek(activeWeek);
   new ResizeObserver(() => {
     document.documentElement.style.setProperty('--header-height', `${$('app-shell').offsetHeight}px`);
     renderTicks();
   }).observe($('app-shell'));
-  weekObserver = new IntersectionObserver(entries => {
-    for (const entry of entries) {
-      if (entry.isIntersecting) controller.ensureWeek(entry.target.dataset.week);
-      else controller.hideWeek(entry.target.dataset.week);
-    }
-  }, { rootMargin: '-220px 0px 120px 0px' });
-  for (const { section } of weekNodes.values()) weekObserver.observe(section);
-  const sentinelObserver = new IntersectionObserver(entries => {
-    if (initialJump || addingWeek || $('place-picker').open || $('simulation').open || $('connection-report').open) return;
-    for (const entry of entries) {
-      if (!entry.isIntersecting) continue;
-      const weeks = [...weekNodes.keys()].sort();
-      if (entry.target.id === 'future-sentinel') {
-        addingWeek = true;
-        createWeek(addDays(weeks.at(-1), 7));
-        renderSlots();
-        requestAnimationFrame(() => { addingWeek = false; });
-      } else if (allowPastLoad && scrollDirection === 'up') {
-        addingWeek = true;
-        const anchor = weekNodes.get(weeks[0]).section;
-        const before = anchor.getBoundingClientRect().top;
-        createWeek(addDays(weeks[0], -7), true);
-        renderSlots();
-        window.scrollBy(0, anchor.getBoundingClientRect().top - before);
-        requestAnimationFrame(() => { addingWeek = false; });
-      }
-    }
-  }, { rootMargin: '-240px 0px 160px 0px' });
-  sentinelObserver.observe($('past-sentinel'));
-  sentinelObserver.observe($('future-sentinel'));
-  controller.ensureWeek(currentWeek, true);
-  requestAnimationFrame(() => requestAnimationFrame(() => { jumpTo(nextWeek); initialJump = false; }));
 }
 
 async function connectDining() {
@@ -548,9 +504,14 @@ async function connectDining() {
     } else {
       model.balanceRials = connection.balanceRials;
       model.restaurants = new Map(restaurants.map(restaurant => [restaurant.id, restaurant]));
+      controller.cancelReads(() => true);
       model.loads.clear();
+      if (controller.running?.kind === 'read') {
+        const { restaurantId, week } = controller.running;
+        model.loads.set(menuKey(restaurantId, week), { restaurantId, week, state: 'loading' });
+      }
       for (const [id, state] of model.saves) if (['login-required', 'reconnect-required', 'account-changed'].includes(state.code)) model.saves.delete(id);
-      for (const week of new Set([...controller.visibleWeeks, ...controller.backgroundWeeks])) controller.ensureWeek(week);
+      controller.showWeek(activeWeek);
       render();
     }
     $('live-reconnect').textContent = 'Live · Refresh';

@@ -14,7 +14,7 @@ function setup({ service: serviceOptions = {}, selectedIds = ['kooy', 'garden'] 
   return { model, service, controller };
 }
 async function load(context, targetWeek = week) {
-  context.controller.ensureWeek(targetWeek);
+  context.controller.showWeek(targetWeek);
   await context.controller.idle();
 }
 function choice(context, restaurantId = 'kooy', day = 1, targetWeek = week) {
@@ -117,13 +117,13 @@ test('restaurant requests are serialized and limited to the selected places', as
     running--;
     return result;
   };
-  context.controller.ensureWeek(week);
-  context.controller.ensureWeek(week);
+  context.controller.showWeek(week);
+  context.controller.showWeek(week);
   await context.controller.idle();
   assert.equal(maximum, 1);
   assert.deepEqual(called, ['kooy', 'garden']);
-  context.controller.ensureWeek(addDays(week, 7));
-  context.controller.hideWeek(addDays(week, 7));
+  context.controller.showWeek(addDays(week, 7));
+  context.controller.showWeek(week);
   await context.controller.idle();
   assert.equal(called.length, 2);
 });
@@ -155,13 +155,72 @@ test('a wrong-week response is rejected without contaminating the calendar', asy
   assert.equal(context.model.loads.get(menuKey('kooy', week)).state, 'error');
 });
 
-test('today’s reservation scan continues while planning a different week', async () => {
+test('only the active week is loaded; cached weeks and newly selected places avoid extra reads', async () => {
   const context = setup();
-  const current = weekOf(today);
-  context.controller.ensureWeek(current, true);
-  context.controller.hideWeek(current);
+  const called = [];
+  const read = context.service.readMenu.bind(context.service);
+  context.service.readMenu = (id, targetWeek) => { called.push([id, targetWeek]); return read(id, targetWeek); };
+  await load(context);
+  assert.deepEqual(called, [['kooy', week], ['garden', week]]);
+  assert.ok(![...context.model.menus.values()].some(menu => menu.week === weekOf(today)));
+  await load(context, addDays(week, 7));
+  const afterNavigation = called.length;
+  await load(context);
+  assert.equal(called.length, afterNavigation);
+  context.controller.add('engineering');
   await context.controller.idle();
-  for (const id of context.model.selectedIds) assert.equal(context.model.loads.get(menuKey(id, current)).state, 'ready');
+  assert.deepEqual(called.at(-1), ['engineering', week]);
+  assert.equal(called.length, afterNavigation + 1);
+});
+
+test('rapid week navigation cancels obsolete queued reads and safely caches an already-running response', async () => {
+  const context = setup();
+  const called = [];
+  let release;
+  const read = context.service.readMenu.bind(context.service);
+  context.service.readMenu = async (id, targetWeek) => {
+    called.push([id, targetWeek]);
+    if (called.length === 1) await new Promise(resolve => { release = resolve; });
+    return read(id, targetWeek);
+  };
+  context.controller.showWeek(week);
+  await tick();
+  context.controller.showWeek(addDays(week, 7));
+  context.controller.showWeek(addDays(week, 14));
+  release();
+  await context.controller.idle();
+  assert.deepEqual(called, [['kooy', week], ['kooy', addDays(week, 14)], ['garden', addDays(week, 14)]]);
+  assert.equal(context.controller.activeWeek, addDays(week, 14));
+  assert.ok(context.model.menus.has(menuKey('kooy', week)));
+  assert.ok(!context.model.loads.has(menuKey('garden', week)));
+  assert.ok(!context.model.menus.has(menuKey('kooy', addDays(week, 7))));
+});
+
+test('removing a restaurant cancels its queued read', async () => {
+  const context = setup();
+  const called = [];
+  const read = context.service.readMenu.bind(context.service);
+  context.service.readMenu = (id, targetWeek) => { called.push(id); return read(id, targetWeek); };
+  context.controller.showWeek(week);
+  context.controller.remove('garden');
+  await context.controller.idle();
+  assert.deepEqual(called, ['kooy']);
+  assert.ok(!context.model.loads.has(menuKey('garden', week)));
+});
+
+test('week navigation keeps unsubmitted intent without triggering a save', async () => {
+  const context = setup();
+  await load(context);
+  const food = choice(context);
+  context.controller.choose(food);
+  let saves = 0;
+  const save = context.service.save.bind(context.service);
+  context.service.save = (...args) => { saves++; return save(...args); };
+  await load(context, addDays(week, 7));
+  await load(context);
+  assert.equal(saves, 0);
+  assert.equal(context.model.drafts.get(food.id).desired, true);
+  assert.equal(context.model.balanceRials, 4_200_000);
 });
 
 test('failure in a later week preserves earlier successes and the remaining draft', async () => {

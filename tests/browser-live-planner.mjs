@@ -40,7 +40,7 @@ const transport = { async request(operation, parameters={}) {
   }
   return {body:menu(parameters.restId)};
 } };
-const api = { runtime:{id:'loghmeh-test-fixture', getURL:path=>`${location.origin}/extension/${path}`,getManifest:()=>({version:'0.4.0-fixture'})},
+const api = { runtime:{id:'loghmeh-test-fixture', getURL:path=>`${location.origin}/extension/${path}`,getManifest:()=>({version:'0.5.0-fixture'})},
   permissions:{contains:async()=>true,request:async()=>true},tabs:{create:async()=>{}} };
 const session = new DiningSession({transport});
 const handler = createMessageHandler(api,session);
