@@ -166,6 +166,8 @@ function renderBalance() {
   $('submit').title = (isLive && !service.writable ? service.writeReason || 'Reconnect dining before saving' : '') || model.issueFor(model.activeId) || 'Submit this restaurant’s changes';
   $('undo-changes').hidden = !count;
   $('undo-changes').disabled = busy;
+  // select() submits the outgoing restaurant's changes; say so before a pill click does it.
+  $('switch-hint').hidden = !count || busy || model.selectedIds.length < 2 || (isLive && !service.writable);
 }
 
 function renderTicks() {

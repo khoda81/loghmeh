@@ -36,6 +36,7 @@ a:hover { text-decoration: underline; }
 .wallet-projection strong { color: var(--ink); font-weight: 600; }
 .wallet-actions { display: flex; align-items: center; gap: 12px; }
 .undo-button { border: 0; padding: 8px 0; background: transparent; color: var(--muted); font-size: 11px; }
+.switch-hint { color: var(--muted); font-size: 11px; }
 .submit-button { border: 0; background: var(--active-color); color: white; padding: 10px 19px; border-radius: 8px; min-width: 134px; font-size: 12px; font-weight: 600; transition: background .2s; }
 .submit-button:not(:disabled):hover { filter: brightness(.94); }
 .submit-button:disabled { background: #e3e7dc; color: #6f7c6b; opacity: 1; }
@@ -172,7 +173,7 @@ dialog::backdrop { background: #263a2e4d; backdrop-filter: blur(2px); }
   .wallet-amount strong { font-size: 24px; }
   .wallet-projection { font-size: 10px; }
   .wallet-actions { gap: 8px; grid-column: 1 / -1; justify-content: flex-end; }
-  .undo-button { font-size: 10px; }
+  .undo-button, .switch-hint { font-size: 10px; }
   .submit-button { min-width: 100px; padding: 9px 12px; font-size: 11px; }
   .balance-key { gap: 9px; font-size: 8px; flex-wrap: wrap; }
   .balance-key .cash-key { display: none; }
