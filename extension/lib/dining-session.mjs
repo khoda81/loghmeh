@@ -75,11 +75,11 @@ export class DiningSession {
     if (!validWeek(week)) throw new ProbeError('invalid-request', 'Choose a valid Saturday-first week.');
     const parameters = { personGroupId: restaurant.personGroupId, restId: restaurant.restId };
     let response = await this.transport.request('menu', parameters);
-    let menu = this.menuParser(response.body, restaurant);
+    let menu = await this.menuParser(response.body, restaurant);
     let distance = Math.round((Date.parse(week) - Date.parse(menu.week)) / (7 * 86400000));
     if (Math.abs(distance) > 8) {
       response = await this.transport.request('current', parameters);
-      menu = this.menuParser(response.body, restaurant);
+      menu = await this.menuParser(response.body, restaurant);
       distance = Math.round((Date.parse(week) - Date.parse(menu.week)) / (7 * 86400000));
     }
     if (Math.abs(distance) > 8) throw new ProbeError('week-range', 'Choose a week within eight weeks of the current menu.');
@@ -87,7 +87,7 @@ export class DiningSession {
       const direction = menu.week < week ? 1 : -1;
       const expected = addDays(menu.week, direction * 7);
       response = await this.transport.request(direction > 0 ? 'next' : 'previous', parameters);
-      const moved = this.menuParser(response.body, restaurant);
+      const moved = await this.menuParser(response.body, restaurant);
       if (moved.week !== expected) throw new ProbeError('week-mismatch', 'Dining did not return the requested week. Close other dining tabs and retry.');
       menu = moved;
     }
