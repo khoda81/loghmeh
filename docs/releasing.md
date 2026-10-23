@@ -15,7 +15,13 @@ re-render them if the SVG changes).
 ## Cutting a release
 
 1. Bump `version` in `extension/manifest.json` and `package.json` (CI checks they match).
-2. Commit, then tag and push: `git tag v0.7.0 && git push origin v0.7.0`.
+2. Commit with jj and push the `main` bookmark, then tag and push the release:
+
+   ```sh
+   jj tag set v0.7.0 -r main
+   jj git push --tag v0.7.0 --dry-run
+   jj git push --tag v0.7.0
+   ```
 3. `.github/workflows/release.yml` tests, packages, and creates the GitHub release
    with both ZIPs attached. Mozilla's validator must also pass without warnings.
    Store jobs run only when enabled (below).
@@ -65,3 +71,20 @@ inputs. Both publishing CLIs run with Bun (`bunx --bun`).
 
 The Firefox add-on ID (`browser_specific_settings.gecko.id`) becomes permanent
 with the first AMO submission. Do not change it afterwards.
+
+## First submission record — 2026-10-23
+
+- [GitHub release v0.6.0](https://github.com/khoda81/loghmeh/releases/tag/v0.6.0)
+  was built by the release workflow, with Firefox and Chrome ZIPs attached.
+- Firefox version 0.6.0 was submitted to Mozilla and entered review. The
+  [listing](https://addons.mozilla.org/firefox/addon/loghmeh/) becomes available
+  after approval. Add-on ID: `loghmeh@khoda81.github.io`; AMO numeric ID:
+  `3105314`; submitted version ID: `6611919`.
+- The owner added `AMO_JWT_ISSUER` and `AMO_JWT_SECRET` as encrypted repository
+  secrets. `PUBLISH_FIREFOX=true` enables future version-tag submissions. The
+  `firefox-add-ons` environment accepts `v*` tags only.
+- Store publishing was deliberately skipped for the already submitted first
+  tag. Packaging and GitHub publication passed in CI; the next new version
+  exercises the authenticated AMO upload job.
+- Chrome Web Store registration was deferred. `PUBLISH_CHROME=false`; its
+  GitHub ZIP and disabled workflow remain ready for later setup.
