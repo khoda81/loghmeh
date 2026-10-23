@@ -87,7 +87,7 @@ nav button[aria-pressed="true"] { color: var(--ink); border-bottom-color: var(--
 .today-label { font-weight: 650; white-space: nowrap; }
 #today-reservations { display: flex; gap: 14px; color: var(--muted); flex-wrap: wrap; }
 .today-booking { display: inline-flex; align-items: center; gap: 6px; color: var(--ink); }
-.calendar-main { display: flex; flex-direction: column; flex: 1; min-height: 0; width: 100%; padding: 0 28px 16px; }
+.calendar-main { display: flex; flex-direction: column; flex: 1; min-height: 340px; width: 100%; padding: 0 28px 16px; }
 .week { height: 100%; display: flex; flex-direction: column; }
 .weeks { flex: 1; min-height: 0; }
 .week-heading { display: flex; flex-shrink: 0; justify-content: space-between; align-items: baseline; padding: 18px 0 14px; }
