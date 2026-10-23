@@ -4,15 +4,17 @@ A calmer meal planner for University of Tehran dining. Pick your usual
 restaurants as colors, preview foods inside a weekly calendar, and keep your
 choices when the server rejects a request.
 
-Independent, unofficial Firefox / Zen extension. **Version 0.6.0 · MIT.**
+Independent, unofficial extension for Firefox / Zen and Chrome / Chromium.
+**Version 0.6.0 · MIT.** Packages are attached to each
+[GitHub release](https://github.com/khoda81/loghmeh/releases).
 
 ![The weekly planner with fictional menus and pending balance changes](docs/assets/planner-demo.jpg)
 
 ## Use in Zen / Firefox
 
-1. Clone this repository.
+1. Clone this repository, or download the Firefox ZIP from a release and unzip it.
 2. Open `about:debugging#/runtime/this-firefox` → **Load Temporary Add-on…**.
-3. Select `extension/manifest.json` from your checkout.
+3. Select `extension/manifest.json` from your checkout (or the unzipped `manifest.json`).
 4. Open **Loghmeh** from the browser toolbar. It connects using that browser's
    dining login. If signed out, use **Open dining login**, sign in normally,
    then **Reconnect dining**.
@@ -31,6 +33,19 @@ an isolated simulation if you want to explore the interactions first.
 After updating source, click **Reload** in `about:debugging`, then open a new
 Loghmeh tab. Temporary installation ends when removed or the browser restarts.
 The only host permission is `https://dining2.ut.ac.ir/*`.
+
+## Use in Chrome / Chromium
+
+1. Download the Chrome ZIP from a release and unzip it, or run `bun run package`
+   and use `dist/chrome/`.
+2. Open `chrome://extensions`, turn on **Developer mode**, and choose
+   **Load unpacked** with that folder.
+3. Open **Loghmeh** from the extensions menu. The rest works as in Firefox.
+
+Chrome parses dining pages in a hidden offscreen document because its
+background service worker has no HTML parser; this adds the `offscreen`
+permission. The Chrome build is verified against fictional dining responses
+only; a real signed-in session has not yet been checked in Chrome.
 
 ## What it does
 
@@ -87,7 +102,7 @@ viewport and each cell scrolls independently. Slots with no foods stay blank.
 The cross-restaurant cancellation flow was checked in the browser's HTTP fixture
 and a dedicated controller test. [Calendar verification notes](docs/verification/ui-0.6.0.md).
 
-There are 56 passing Bun tests and 20 passing browser parser checks. The
+There are 59 passing Bun tests and 20 passing browser parser checks. The
 write serializer and reconciliation logic are tested with fictional HTTP
 responses; one live change is verified. General refund behavior and batch
 atomicity remain unverified. See
@@ -123,8 +138,10 @@ Useful local checks:
 - `/tests/browser-mobile.html` — 390px responsive preview.
 - `/extension/probe.html` — the separate read-only connection probe.
 
-`bun run package` builds `dist/loghmeh-0.6.0.zip`, also loadable as a temporary
-add-on. Packages contain `extension/` and the MIT license. Captures, outputs, private checks,
+`bun run package` builds `dist/loghmeh-0.6.0-firefox.zip` and
+`dist/loghmeh-0.6.0-chrome.zip`, plus unpacked `dist/firefox/` and `dist/chrome/`.
+Packages contain `extension/` and the MIT license; Chrome gets a derived
+manifest. Releases are cut from version tags: see [releasing](docs/releasing.md). Captures, outputs, private checks,
 and local credentials are ignored and excluded.
 
 The background script owns navigation, preflight, writes, and read-back in a

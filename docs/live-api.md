@@ -104,7 +104,7 @@ account identifiers, wallet identifiers, and raw server HTML.
 
 ## Verification
 
-- 56 Bun tests cover transport boundaries, the shared queue, exact opaque
+- 59 Bun tests cover transport boundaries, the shared queue, exact opaque
   serialization, cursor validation, business rejection, lost-response
   reconciliation, partial success, changed accounts/prices/quantities, and
   the existing planner and signed ledger behavior.

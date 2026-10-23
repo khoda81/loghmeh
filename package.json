@@ -3,7 +3,7 @@
   "version": "0.6.0",
   "private": true,
   "type": "module",
-  "description": "An independent Firefox / Zen meal planner for University of Tehran dining, using your existing browser session.",
+  "description": "An independent Firefox and Chrome extension for planning University of Tehran dining reservations with your existing browser login.",
   "scripts": {
     "test": "bun test ./tests",
     "check": "bun scripts/check.mjs",
