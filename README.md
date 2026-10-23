@@ -84,7 +84,7 @@ viewport and each cell scrolls independently. Slots with no foods stay blank.
 The cross-restaurant cancellation flow was checked in the browser's HTTP fixture
 and a dedicated controller test. [Calendar verification notes](docs/verification/ui-0.6.0.md).
 
-There are 51 passing Node tests and 20 passing browser parser checks. The
+There are 54 passing Bun tests and 20 passing browser parser checks. The
 write serializer and reconciliation logic are tested with fictional HTTP
 responses; one live change is verified. General refund behavior and batch
 atomicity remain unverified. See
@@ -93,13 +93,19 @@ atomicity remain unverified. See
 
 ## Develop and preview
 
-Node 22+ and Python 3 are sufficient. No dependencies or install step.
+Bun 1.4.2 or newer runs the tests, syntax checks, preview server, and ZIP
+packager. CI uses the version pinned in `packageManager`. Install the development
+dependency from the committed Bun lockfile:
 
 ```sh
-npm test
-npm run check
-npm run preview
+bun install --frozen-lockfile
+bun test
+bun run check
+bun run preview
 ```
+
+`fflate` is used only by the ZIP packager; the extension stays as ordinary
+browser modules. Node and Python installations are not required.
 
 Open <http://localhost:4173/extension/planner.html>. **Localhost always uses
 fictional data and cannot reuse your dining login.** The extension's explicit
@@ -114,7 +120,7 @@ Useful local checks:
 - `/tests/browser-mobile.html` — 390px responsive preview.
 - `/extension/probe.html` — the separate read-only connection probe.
 
-`npm run package` builds `dist/loghmeh-0.6.0.zip`, also loadable as a temporary
+`bun run package` builds `dist/loghmeh-0.6.0.zip`, also loadable as a temporary
 add-on. Packages contain `extension/` and the MIT license. Captures, outputs, private checks,
 and local credentials are ignored and excluded.
 

@@ -5,13 +5,14 @@
   "type": "module",
   "description": "An independent Firefox / Zen meal planner for University of Tehran dining, using your existing browser session.",
   "scripts": {
-    "test": "node --test tests/*.test.mjs",
-    "check": "node scripts/check.mjs",
-    "preview": "node scripts/preview.mjs",
-    "package": "python scripts/package.py"
+    "test": "bun test ./tests",
+    "check": "bun scripts/check.mjs",
+    "preview": "bun scripts/preview.mjs",
+    "package": "bun scripts/package.mjs"
   },
+  "packageManager": "bun@1.4.2",
   "engines": {
-    "node": ">=22"
+    "bun": ">=1.4.2"
   },
   "license": "MIT",
   "repository": {
@@ -21,5 +22,8 @@
   "homepage": "https://github.com/khoda81/loghmeh",
   "bugs": {
     "url": "https://github.com/khoda81/loghmeh/issues"
+  },
+  "devDependencies": {
+    "fflate": "0.8.3"
   }
 }

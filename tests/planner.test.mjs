@@ -1,4 +1,4 @@
-import test from 'node:test';
+import { test } from 'bun:test';
 import assert from 'node:assert/strict';
 import { PlannerModel, addDays, weekOf, tehranToday, menuKey } from '../extension/lib/planner-model.mjs';
 import { RESTAURANTS, DemoDiningService } from '../extension/lib/planner-demo.mjs';

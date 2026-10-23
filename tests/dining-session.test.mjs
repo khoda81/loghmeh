@@ -1,4 +1,4 @@
-import test from 'node:test';
+import { test } from 'bun:test';
 import assert from 'node:assert/strict';
 import { DiningSession } from '../extension/lib/dining-session.mjs';
 import { LiveDiningService } from '../extension/lib/planner-live.mjs';

@@ -1,25 +1,22 @@
-import { readFile, readdir } from 'node:fs/promises';
-import { spawnSync } from 'node:child_process';
 import assert from 'node:assert/strict';
+import path from 'node:path';
 
-async function checkDirectory(directory) {
-  for (const entry of await readdir(directory, { withFileTypes: true })) {
-    const filename = `${directory}/${entry.name}`;
-    if (entry.isDirectory()) await checkDirectory(filename);
-    else if (entry.name.endsWith('.mjs')) {
-      const result = spawnSync(process.execPath, ['--check', filename], { encoding: 'utf8' });
-      if (result.status !== 0) throw new Error(result.stderr);
-    }
+const root = path.resolve(import.meta.dir, '..');
+const transpiler = new Bun.Transpiler({ loader: 'js' });
+for (const filename of new Bun.Glob('{extension,scripts,tests}/**/*.mjs').scanSync(root)) {
+  try {
+    transpiler.transformSync(await Bun.file(path.join(root, filename)).text());
+  } catch (cause) {
+    throw new Error(`Syntax check failed: ${filename}`, { cause });
   }
 }
-await checkDirectory('extension');
-await checkDirectory('scripts');
-await checkDirectory('tests');
-const manifest = JSON.parse(await readFile('extension/manifest.json', 'utf8'));
+const manifest = await Bun.file(path.join(root, 'extension/manifest.json')).json();
 assert.deepEqual(manifest.host_permissions, ['https://dining2.ut.ac.ir/*']);
 assert.equal(manifest.permissions, undefined);
 assert.equal(manifest.background.type, 'module');
 assert.deepEqual(manifest.background.scripts, ['background.mjs']);
-for (const file of ['background.mjs', 'probe.html', 'probe.mjs', 'probe.css', 'planner.html', 'planner.mjs', 'planner.css', 'icon.svg']) await readFile(`extension/${file}`);
-assert.equal(JSON.parse(await readFile('package.json', 'utf8')).version, manifest.version);
+for (const file of ['background.mjs', 'probe.html', 'probe.mjs', 'probe.css', 'planner.html', 'planner.mjs', 'planner.css', 'icon.svg']) {
+  assert.ok(await Bun.file(path.join(root, 'extension', file)).exists(), `Missing extension file: ${file}`);
+}
+assert.equal((await Bun.file(path.join(root, 'package.json')).json()).version, manifest.version);
 console.log('Syntax and Firefox manifest checks passed. One host; no cookie, storage, or tabs API permissions.');

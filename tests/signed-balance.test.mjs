@@ -1,4 +1,4 @@
-import test from 'node:test';
+import { test } from 'bun:test';
 import assert from 'node:assert/strict';
 import { PlannerModel } from '../extension/lib/planner-model.mjs';
 import { SignedBalanceLedger, signedBalanceTicks } from '../extension/lib/signed-balance.mjs';
