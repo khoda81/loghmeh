@@ -4,7 +4,7 @@ A calmer meal planner for University of Tehran dining. Pick your usual
 restaurants as colors, preview foods inside a weekly calendar, and keep your
 choices when the server rejects a request.
 
-Independent, unofficial extension for Firefox / Zen and Chrome / Chromium.
+Independent, unofficial extension for Firefox / Zen 142+ and Chrome / Chromium 116+.
 **Version 0.6.0 · MIT.** Packages are attached to each
 [GitHub release](https://github.com/khoda81/loghmeh/releases).
 
@@ -33,6 +33,8 @@ an isolated simulation if you want to explore the interactions first.
 After updating source, click **Reload** in `about:debugging`, then open a new
 Loghmeh tab. Temporary installation ends when removed or the browser restarts.
 The only host permission is `https://dining2.ut.ac.ir/*`.
+The browser's data-use prompt covers the university session, dining content,
+and reservation/wallet requests. [Privacy policy](PRIVACY.md).
 
 ## Use in Chrome / Chromium
 

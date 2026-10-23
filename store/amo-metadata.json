@@ -1,0 +1,20 @@
+{
+  "summary": {
+    "en-US": "Plan University of Tehran meals across restaurants in one weekly calendar, using your existing dining login."
+  },
+  "description": {
+    "en-US": "Loghmeh is an independent, unofficial University of Tehran meal planner. Pick your usual restaurants as colors, see their food options in a weekly calendar, and keep your draft when dining rejects a change.\n\nSee existing reservations, move between weeks, and preview pending spending and refunds on a balance ruler. Submit works per restaurant; changing the active restaurant also saves that restaurant's pending changes.\n\nLive mode requires an eligible university dining account and uses your existing browser login. Requests go directly to dining2.ut.ac.ir: the browser sends its session cookies, and reservation changes include food, restaurant, group, and dining-wallet identifiers. Loghmeh has no backend, ads, analytics, or developer data collection. Restaurant preferences stay local; live account data and drafts stay in memory.\n\nAn offline sample mode with fictional meals is included. Loghmeh is not affiliated with the University of Tehran.\n\nThe extension is free. Actual university meals require an eligible account and sufficient university dining balance."
+  },
+  "requires_payment": true,
+  "categories": ["other"],
+  "homepage": {
+    "en-US": "https://github.com/khoda81/loghmeh"
+  },
+  "support_url": {
+    "en-US": "https://github.com/khoda81/loghmeh/issues"
+  },
+  "version": {
+    "license": "MIT",
+    "approval_notes": "Independent, unofficial University of Tehran dining client. The ZIP contains original, readable browser modules; there is no transpilation, bundling, remote code, or runtime third-party library. To test without a university account, open the toolbar action and choose the sample-menu link, or open planner.html?demo=1 inside the extension. Sample mode uses fictional data and makes no university requests. Live mode requires an eligible University of Tehran dining account; no shared test credentials are included. Login takes place on the university site, using normal browser cookies. Only dining2.ut.ac.ir is a permitted request host. Submit and switching restaurant can change real reservations and wallet balance. Live reads and one intended save were verified by the developer in Zen/Firefox; refund and batch atomicity are not generally verified. See the repository's README and docs/live-api.md for the request contract and limitations."
+  }
+}

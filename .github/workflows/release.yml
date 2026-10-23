@@ -4,6 +4,13 @@ name: Release
 on:
   push:
     tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      store:
+        description: 'Store to retry. Select the existing version tag as the workflow ref.'
+        type: choice
+        options: [both, firefox, chrome]
+        default: both
 permissions:
   contents: read
 concurrency:
@@ -23,6 +30,7 @@ jobs:
       - run: bun install --frozen-lockfile
       - run: bun test
       - run: bun run check
+      - run: bunx --bun web-ext@10.7.0 lint --source-dir extension --warnings-as-errors
       - name: Require the tag to match the manifest version
         run: test "$GITHUB_REF_NAME" = "v$(jq -r .version extension/manifest.json)"
       - run: bun run package
@@ -31,13 +39,17 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           version="${GITHUB_REF_NAME#v}"
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            echo "The GitHub release already exists; continuing with the selected store."
+            exit 0
+          fi
           gh release create "$GITHUB_REF_NAME" --verify-tag --title "Loghmeh $version" --generate-notes \
             --notes "Install from the browser stores when listed. These ZIPs are for review and developer loading: Chrome → chrome://extensions → Developer mode → Load unpacked (unzip first); Firefox → about:debugging → Load Temporary Add-on (unsigned, removed on restart)." \
             "dist/loghmeh-$version-firefox.zip" "dist/loghmeh-$version-chrome.zip"
 
   firefox-add-ons:
     needs: github-release
-    if: vars.PUBLISH_FIREFOX == 'true'
+    if: vars.PUBLISH_FIREFOX == 'true' && (github.event_name == 'push' || inputs.store == 'both' || inputs.store == 'firefox')
     runs-on: ubuntu-latest
     environment: firefox-add-ons
     steps:
@@ -50,14 +62,14 @@ jobs:
       - run: bun install --frozen-lockfile
       - run: bun run package
       # Submits a listed version for Mozilla review without waiting for approval.
-      - run: bunx web-ext@10.7.0 sign --source-dir dist/firefox --artifacts-dir dist/amo --channel listed --approval-timeout 0
+      - run: bunx --bun web-ext@10.7.0 sign --source-dir dist/firefox --artifacts-dir dist/amo --channel listed --approval-timeout 0 --amo-metadata store/amo-metadata.json
         env:
           WEB_EXT_API_KEY: ${{ secrets.AMO_JWT_ISSUER }}
           WEB_EXT_API_SECRET: ${{ secrets.AMO_JWT_SECRET }}
 
   chrome-web-store:
     needs: github-release
-    if: vars.PUBLISH_CHROME == 'true'
+    if: vars.PUBLISH_CHROME == 'true' && (github.event_name == 'push' || inputs.store == 'both' || inputs.store == 'chrome')
     runs-on: ubuntu-latest
     environment: chrome-web-store
     steps:
@@ -70,7 +82,7 @@ jobs:
       - run: bun install --frozen-lockfile
       - run: bun run package
       # Uploads the ZIP and submits it for review; Google publishes after approval.
-      - run: bunx chrome-webstore-upload-cli@4.0.2 --source "dist/loghmeh-${GITHUB_REF_NAME#v}-chrome.zip"
+      - run: bunx --bun chrome-webstore-upload-cli@4.0.2 --source "dist/loghmeh-${GITHUB_REF_NAME#v}-chrome.zip"
         env:
           EXTENSION_ID: ${{ vars.CHROME_EXTENSION_ID }}
           PUBLISHER_ID: ${{ vars.CHROME_PUBLISHER_ID }}
