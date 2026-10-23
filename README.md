@@ -18,12 +18,14 @@ Independent, unofficial Firefox / Zen extension. **Version 0.6.0 · MIT.**
    then **Reconnect dining**.
 5. Add your usual restaurants from the nested picker. Food options stay visible;
    click one to select it. Hovering an existing reservation shows ×; clicking the
-   card stages its removal. Keyboard focus provides the same actions.
+   card stages its removal; clicking it again keeps the reservation. Keyboard
+   focus provides the same actions.
 
 **The extension planner uses real dining data. Submit and changing restaurant
 pills submit the outgoing restaurant's pending changes.** Clicking a reservation
 stages its cancellation and activates that restaurant for Submit/Undo; other
-drafts stay pending. The sample-menu link opens
+drafts stay pending. A note beside Submit says when a pill switch would save.
+The sample-menu link opens
 an isolated simulation if you want to explore the interactions first.
 
 After updating source, click **Reload** in `about:debugging`, then open a new
@@ -37,7 +39,8 @@ The only host permission is `https://dining2.ut.ac.ir/*`.
   selected restaurants; menus arrive incrementally beside their loading pills.
   Returning to a loaded week reuses its snapshot in the open tab. The calendar
   fills the viewport; each meal cell scrolls independently and keeps its height
-  when restaurant content changes.
+  when restaurant content changes. Short screens scroll the page instead of
+  shrinking the cells below one card.
 - Use **This week** to see current reservations. Only selected places are checked;
   no other week is scanned in the background.
 - See known paid value below zero and available balance above zero on the ruler. Pending
@@ -84,7 +87,7 @@ viewport and each cell scrolls independently. Slots with no foods stay blank.
 The cross-restaurant cancellation flow was checked in the browser's HTTP fixture
 and a dedicated controller test. [Calendar verification notes](docs/verification/ui-0.6.0.md).
 
-There are 54 passing Bun tests and 20 passing browser parser checks. The
+There are 56 passing Bun tests and 20 passing browser parser checks. The
 write serializer and reconciliation logic are tested with fictional HTTP
 responses; one live change is verified. General refund behavior and batch
 atomicity remain unverified. See

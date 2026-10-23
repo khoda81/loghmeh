@@ -19,6 +19,9 @@ calendar fills the viewport with equal, fixed meal rows; each cell scrolls its
 own contents. Empty menus leave blank cells rather than no-food labels. Removing a card
 from another restaurant activates its Submit/Undo context without implicitly
 saving the outgoing draft. Locked reservations retain their lock reason.
+A pending cancellation card is itself a Keep toggle, and a note beside Submit
+returns whenever a pill switch would save. Below a 340px calendar floor the
+page scrolls rather than collapsing the meal rows.
 
 Still open from the earlier interaction ideas:
 
