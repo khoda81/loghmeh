@@ -234,20 +234,20 @@ function card(choice, removing = false) {
   const saving = model.inflight.has(choice.id);
   const failed = draft && model.saves.get(choice.restaurantId)?.state === 'error';
   const removable = !choice.locked && !removing;
-  const node = el(removable ? 'button' : 'div', `food-card${draft ? ' is-draft' : ''}${removing ? ' is-removing' : ''}${removable ? ' is-removable' : ''}`);
+  // A staged cancellation stays clickable so a stray tap can be taken back in place.
+  const restorable = removing && !saving;
+  const node = el(removable || restorable ? 'button' : 'div', `food-card${draft ? ' is-draft' : ''}${removing ? ' is-removing' : ''}${removable || restorable ? ' is-toggle' : ''}`);
   node.style.setProperty('--restaurant-color', restaurant.color);
   node.dataset.choiceId = choice.id;
   node.dataset.focusKey = `reservation-${choice.id}`;
   node.title = choice.locked ? choice.lockReason || restaurant.name : restaurant.name;
-  node.setAttribute('aria-label', `${removable ? 'Remove ' : ''}${choice.name} · ${restaurant.name}`);
-  if (removable) {
+  node.setAttribute('aria-label', `${removable ? 'Remove ' : restorable ? 'Keep ' : ''}${choice.name} · ${restaurant.name}`);
+  if (removable || restorable) {
     node.type = 'button';
-    node.addEventListener('click', () => controller.removeChoice(choice));
-    const hint = el('span', 'remove-hint', '×');
+    node.addEventListener('click', () => removable ? controller.removeChoice(choice) : controller.choose(choice));
+    const hint = el('span', 'card-hint', removable ? '×' : '↶');
     hint.setAttribute('aria-hidden', 'true');
     node.append(hint);
-  } else if (removing) {
-    node.tabIndex = -1;
   }
   const food = el('span', 'food-name', choice.name);
   food.dir = 'rtl';

@@ -171,6 +171,18 @@ test('removing another restaurant’s reservation resolves the conflict without 
   assert.ok(context.model.drafts.has(replacement.id));
 });
 
+test('choosing a reservation again takes back its staged cancellation', async () => {
+  const context = setup({ selectedIds: ['kooy'] });
+  const existing = context.service.foods('kooy', week).find(item => item.date === addDays(week, 1) && item.mealId === '1');
+  context.service.bookings.add(existing.id);
+  await load(context);
+  context.controller.removeChoice(existing);
+  assert.equal(context.model.changes().length, 1);
+  context.controller.choose(existing);
+  assert.equal(context.model.changes().length, 0);
+  assert.ok(context.model.bookings().some(item => item.id === existing.id));
+});
+
 test('removing a reservation from an unknown restaurant changes nothing', async () => {
   const context = setup({ selectedIds: ['kooy'] });
   await load(context);

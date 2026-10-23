@@ -110,8 +110,8 @@ nav button[aria-pressed="true"] { color: var(--ink); border-bottom-color: var(--
 .food-card.is-draft { outline: 1px dashed color-mix(in srgb, var(--restaurant-color) 55%, transparent); outline-offset: -1px; }
 .food-card.is-removing { opacity: .55; }
 .food-card.is-removing .food-name { text-decoration: line-through; }
-.remove-hint { position: absolute; inset: 0; display: grid; place-items: center; border-radius: inherit; background: color-mix(in srgb, var(--surface) 85%, transparent); color: var(--restaurant-color); font-size: 32px; opacity: 0; pointer-events: none; transition: opacity .13s; }
-.food-card.is-removable:hover .remove-hint, .food-card.is-removable:focus-visible .remove-hint { opacity: 1; }
+.card-hint { position: absolute; inset: 0; display: grid; place-items: center; border-radius: inherit; background: color-mix(in srgb, var(--surface) 85%, transparent); color: var(--restaurant-color); font-size: 32px; opacity: 0; pointer-events: none; transition: opacity .13s; }
+.food-card.is-toggle:hover .card-hint, .food-card.is-toggle:focus-visible .card-hint { opacity: 1; }
 .food-name { display: block; width: 100%; border: 0; background: transparent; text-align: right; font-size: 12px; line-height: 1.75; padding: 0; min-height: 22px; }
 .food-card-bottom { display: flex; justify-content: space-between; gap: 4px; margin-top: 7px; font-size: 8px; color: #74806e; }
 .food-card-bottom .draft-state { color: var(--restaurant-color); font-weight: 600; }
