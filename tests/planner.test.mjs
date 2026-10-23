@@ -171,6 +171,16 @@ test('removing another restaurant’s reservation resolves the conflict without 
   assert.ok(context.model.drafts.has(replacement.id));
 });
 
+test('removing a reservation from an unknown restaurant changes nothing', async () => {
+  const context = setup({ selectedIds: ['kooy'] });
+  await load(context);
+  const food = choice(context);
+  assert.equal(context.controller.removeChoice({ ...food, restaurantId: 'gone' }), false);
+  assert.deepEqual(context.model.selectedIds, ['kooy']);
+  assert.equal(context.model.activeId, 'kooy');
+  assert.equal(context.model.changes().length, 0);
+});
+
 test('a wrong-week response is rejected without contaminating the calendar', async () => {
   const context = setup({ selectedIds: ['kooy'] });
   const read = context.service.readMenu.bind(context.service);
