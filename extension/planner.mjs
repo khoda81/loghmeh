@@ -315,12 +315,10 @@ function renderSlots() {
     if (conflictSlots.has(key)) cell.append(el('p', 'slot-conflict', 'Meal entitlement conflict'));
   }
   if (focused?.startsWith('ghost-') || focused?.startsWith('reservation-')) {
-    const focusKey = focused.startsWith('ghost-') && model.bookings().some(choice => `ghost-${choice.id}` === focused)
+    const focusKey = focused.startsWith('ghost-') && bookings.some(choice => `ghost-${choice.id}` === focused)
       ? focused.replace('ghost-', 'reservation-') : focused;
-    const targets = [...document.querySelectorAll('[data-focus-key]')];
-    const target = targets.find(node => node.dataset.focusKey === focusKey)
-      || targets.find(node => node.dataset.focusKey === focusKey.replace('reservation-', 'ghost-'));
-    target?.focus({ preventScroll: true });
+    const nodes = new Map([...$('weeks').querySelectorAll('[data-focus-key]')].map(node => [node.dataset.focusKey, node]));
+    (nodes.get(focusKey) || nodes.get(focusKey.replace('reservation-', 'ghost-')))?.focus({ preventScroll: true });
   }
 }
 
