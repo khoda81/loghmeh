@@ -71,7 +71,7 @@ only; a real signed-in session has not yet been checked in Chrome.
   Returning to a loaded week reuses its snapshot in the open tab. The calendar
   has a fixed height; each meal cell scrolls independently. The page scrolls
   naturally with the budget pinned at the top and restaurant pills below the calendar.
-- Use the arrows beside the calendar day headers to change weeks. Only selected places are checked;
+- Use the side arrows or Left/Right arrow keys to change weeks. Shift+scroll over the calendar also changes weeks, once per gesture. Only selected places are checked;
   no other week is scanned in the background.
 - See known paid value below zero and available balance above zero on the ruler. Pending
   spending and refunds use opposite hatching. Hover a segment for its food and restaurant. Pending amounts are estimates;

@@ -1,19 +1,60 @@
 <script lang="ts">
   import { ArrowLeft, ArrowRight } from '@lucide/svelte';
+  import { WeekScrollGesture } from '../lib/calendar-navigation.ts';
   import FoodCard from './FoodCard.svelte';
   import type { PlannerController } from '../lib/planner-controller.ts';
   import { MEALS, addDays, type PlannerModel } from '../lib/planner-model.ts';
   import { formatDay, mealName, money, slotView } from '../lib/planner-view.ts';
   import type { Choice } from '../lib/types.ts';
 
-  let { model, controller, week, today, currentMeal, revision, onprevious, onnext }: {
+  interface Props {
     model: PlannerModel; controller: PlannerController; week: string; today: string; currentMeal: string; revision: number;
     onprevious: () => void; onnext: () => void;
-  } = $props();
+  }
+  let { model, controller, week, today, currentMeal, revision, onprevious, onnext }: Props = $props();
   const days = $derived(Array.from({ length: 7 }, (_, day) => addDays(week, day)));
   let grid = $state<HTMLElement>();
   let focused: HTMLElement | undefined;
   let displayedWeek: string | undefined;
+
+  const scrollGesture = new WeekScrollGesture();
+
+  function shortcutsBlocked(target: EventTarget | null) {
+    return Boolean(document.querySelector('dialog[open]') ||
+      target instanceof Element && target.closest('input, textarea, select, [contenteditable]:not([contenteditable="false"]), [role="textbox"], [role="slider"], [role="spinbutton"]'));
+  }
+
+  function navigate(direction: -1 | 1) {
+    // A card may disappear with the week; keep focus on a stable control instead.
+    if (grid?.contains(document.activeElement)) {
+      focused = undefined;
+      grid.closest('.week')?.querySelector<HTMLButtonElement>(direction < 0 ? '.previous' : '.next')?.focus({ preventScroll: true });
+    }
+    if (direction < 0) onprevious();
+    else onnext();
+  }
+
+  function keydown(event: KeyboardEvent) {
+    if (event.defaultPrevented || event.repeat || event.isComposing || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey || shortcutsBlocked(event.target)) return;
+    if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+    event.preventDefault();
+    navigate(event.key === 'ArrowLeft' ? -1 : 1);
+  }
+
+  function wheel(event: WheelEvent) {
+    if (!event.shiftKey || event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey || shortcutsBlocked(event.target)) {
+      scrollGesture.reset();
+      return;
+    }
+    event.preventDefault();
+    const direction = scrollGesture.push(event.deltaX, event.deltaY, event.deltaMode, performance.now());
+    if (direction) navigate(direction);
+  }
+
+  function wheelNavigation(node: HTMLElement) {
+    node.addEventListener('wheel', wheel, { passive: false });
+    return { destroy: () => node.removeEventListener('wheel', wheel) };
+  }
 
   // Only navigation animates; initial render, menu updates, and clock changes stay still.
   function animateWeek(node: HTMLElement, nextWeek: string) {
@@ -59,10 +100,12 @@
   });
 </script>
 
-<section class="week" data-week={week} aria-label="Week of {formatDay(week, 'short')}">
+<svelte:window onkeydown={keydown} />
+
+<section use:wheelNavigation class="week" data-week={week} aria-label="Week of {formatDay(week, 'short')}">
   <div class="week-controls" role="group" aria-label="Calendar week">
-    <button class="week-arrow previous" aria-label="Previous week" title="Previous week" onclick={onprevious}><ArrowLeft size={20} aria-hidden="true" /></button>
-    <button class="week-arrow next" aria-label="Next week" title="Next week" onclick={onnext}><ArrowRight size={20} aria-hidden="true" /></button>
+    <button class="week-arrow previous" aria-label="Previous week" title="Previous week (← or Shift+scroll up)" aria-keyshortcuts="ArrowLeft" onclick={onprevious}><ArrowLeft size={20} aria-hidden="true" /></button>
+    <button class="week-arrow next" aria-label="Next week" title="Next week (→ or Shift+scroll down)" aria-keyshortcuts="ArrowRight" onclick={onnext}><ArrowRight size={20} aria-hidden="true" /></button>
   </div>
   <div class="week-viewport">
   <!-- Reset the cells and their scroll position while keeping the week buttons focused. -->
