@@ -13,6 +13,20 @@
   const days = $derived(Array.from({ length: 7 }, (_, day) => addDays(week, day)));
   let grid = $state<HTMLElement>();
   let focused: HTMLElement | undefined;
+  let displayedWeek: string | undefined;
+
+  // Only navigation animates; initial render, menu updates, and clock changes stay still.
+  function animateWeek(node: HTMLElement, nextWeek: string) {
+    const direction = displayedWeek ? Math.sign(nextWeek.localeCompare(displayedWeek)) : 0;
+    displayedWeek = nextWeek;
+    if (!direction || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const animation = node.animate([
+      { transform: `translateX(${direction * 32}px)`, opacity: 0.35 },
+      { transform: 'translateX(0)', opacity: 1 },
+    ], { duration: 220, easing: 'cubic-bezier(0.2, 0.7, 0.3, 1)' });
+    // A rapid second click replaces the week immediately and cancels its old animation.
+    return { destroy: () => animation.cancel() };
+  }
 
   const v = $derived.by(() => {
     void revision;
@@ -50,9 +64,10 @@
     <button class="week-arrow previous" aria-label="Previous week" title="Previous week" onclick={onprevious}><ArrowLeft size={20} aria-hidden="true" /></button>
     <button class="week-arrow next" aria-label="Next week" title="Next week" onclick={onnext}><ArrowRight size={20} aria-hidden="true" /></button>
   </div>
+  <div class="week-viewport">
   <!-- Reset the cells and their scroll position while keeping the week buttons focused. -->
   {#key `${week}|${today}`}
-  <div class="week-scroll">
+  <div class="week-scroll" use:animateWeek={week}>
     <div class="week-grid" bind:this={grid}
       onfocusin={event => { focused = (event.target as HTMLElement).dataset.focusKey ? event.target as HTMLElement : undefined; }}>
       <div></div>
@@ -103,4 +118,5 @@
     </div>
   </div>
   {/key}
+  </div>
 </section>
