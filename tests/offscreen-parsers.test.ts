@@ -1,10 +1,11 @@
 import { test } from 'bun:test';
 import assert from 'node:assert/strict';
-import { createOffscreenParsers } from '../extension/lib/offscreen-parsers.mjs';
-import { ProbeError } from '../extension/lib/transport.mjs';
+import { createOffscreenParsers } from '../extension/lib/offscreen-parsers.ts';
+import { ProbeError } from '../extension/lib/transport.ts';
+import { fake } from './fake.ts';
 
 function fakeChrome(answer) {
-  const calls = { created: 0, messages: [] };
+  const calls = { created: 0, messages: [], options: undefined };
   let open = false;
   const api = {
     runtime: {
@@ -20,7 +21,7 @@ function fakeChrome(answer) {
 test('Chrome parsing opens one offscreen document and forwards the page and restaurant', async () => {
   const { api, calls } = fakeChrome(message => ({ ok: true, value: { parser: message.parser, length: message.html.length } }));
   const { bootstrapParser, menuParser } = createOffscreenParsers(api);
-  const [bootstrap, menu] = await Promise.all([bootstrapParser('<html>'), menuParser('<p>', { id: '1:2' })]);
+  const [bootstrap, menu] = await Promise.all([bootstrapParser('<html>'), menuParser('<p>', fake({ id: '1:2' }))]);
   assert.deepEqual(bootstrap, { parser: 'bootstrap', length: 6 });
   assert.deepEqual(menu, { parser: 'menu', length: 3 });
   assert.equal(calls.created, 1);
@@ -38,8 +39,8 @@ test('parser errors keep their public code, and a closed reader is reopened', as
     return { ok: true, value: 'parsed' };
   });
   const { bootstrapParser } = createOffscreenParsers(api);
-  await assert.rejects(bootstrapParser('<html>'), error => error instanceof ProbeError && error.code === 'login-required' && error.message === 'Sign in.');
-  await assert.rejects(bootstrapParser('<html>'), error => error instanceof ProbeError && error.code === 'unexpected-error');
+  await assert.rejects(bootstrapParser('<html>'), (error: unknown) => error instanceof ProbeError && error.code === 'login-required' && error.message === 'Sign in.');
+  await assert.rejects(bootstrapParser('<html>'), (error: unknown) => error instanceof ProbeError && error.code === 'unexpected-error');
   assert.equal(await bootstrapParser('<html>'), 'parsed');
   assert.equal(calls.created, 2);
 });

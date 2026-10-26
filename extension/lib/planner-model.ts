@@ -1,30 +1,44 @@
+import type { CapturedChange, Choice, Draft, LoadState, Menu, Restaurant, SaveState } from './types.ts';
+
 export const MEALS = [{ id: '1', name: 'Lunch' }, { id: '3', name: 'Dinner' }];
-export const isoDate = date => date.toISOString().slice(0, 10);
-export const addDays = (day, count) => isoDate(new Date(Date.parse(day + 'T12:00:00Z') + count * 86_400_000));
-export const weekOf = day => addDays(day, -((new Date(day + 'T12:00:00Z').getUTCDay() + 1) % 7));
-export const menuKey = (restaurantId, week) => `${restaurantId}|${week}`;
-export const slotKey = choice => `${choice.date}|${choice.mealId}`;
+export const isoDate = (date: Date) => date.toISOString().slice(0, 10);
+export const addDays = (day: string, count: number) => isoDate(new Date(Date.parse(day + 'T12:00:00Z') + count * 86_400_000));
+export const weekOf = (day: string) => addDays(day, -((new Date(day + 'T12:00:00Z').getUTCDay() + 1) % 7));
+export const menuKey = (restaurantId: string, week: string) => `${restaurantId}|${week}`;
+export const slotKey = (choice: Pick<Choice, 'date' | 'mealId'>) => `${choice.date}|${choice.mealId}`;
 export function tehranToday(now = new Date()) {
   const parts = new Intl.DateTimeFormat('en', { timeZone: 'Asia/Tehran', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(now);
-  return ['year', 'month', 'day'].map(type => parts.find(part => part.type === type).value).join('-');
+  return ['year', 'month', 'day'].map(type => parts.find(part => part.type === type)!.value).join('-');
 }
 
 // Confirmed bookings, local intent, and captured writes have separate ownership.
+export interface PlannerState {
+  selectedIds: string[];
+  activeId?: string;
+  drafts?: Pick<Draft, 'choice' | 'desired'>[];
+  menus?: Menu[];
+}
+
 export class PlannerModel {
-  constructor({ restaurants, balanceRials, selectedIds, activeId, drafts = [], menus = [] }) {
+  restaurants: Map<string, Restaurant>;
+  balanceRials: number;
+  selectedIds: string[];
+  activeId: string;
+  menus = new Map<string, Menu>();
+  confirmed = new Map<string, Choice>();
+  drafts = new Map<string, Draft>();
+  inflight = new Map<string, number>();
+  inflightDrafts = new Map<string, CapturedChange>();
+  loads = new Map<string, LoadState>();
+  saves = new Map<string, SaveState>();
+  revision = 0;
+  commitRevision = 0;
+
+  constructor({ restaurants, balanceRials, selectedIds, activeId, drafts = [], menus = [] }: PlannerState & { restaurants: Restaurant[]; balanceRials: number }) {
     this.restaurants = new Map(restaurants.map(restaurant => [restaurant.id, restaurant]));
     this.balanceRials = balanceRials;
     this.selectedIds = selectedIds.filter(id => this.restaurants.has(id));
-    this.activeId = this.selectedIds.includes(activeId) ? activeId : this.selectedIds[0];
-    this.menus = new Map();
-    this.confirmed = new Map();
-    this.drafts = new Map();
-    this.inflight = new Map();
-    this.inflightDrafts = new Map();
-    this.loads = new Map();
-    this.saves = new Map();
-    this.revision = 0;
-    this.commitRevision = 0;
+    this.activeId = activeId && this.selectedIds.includes(activeId) ? activeId : this.selectedIds[0];
     for (const menu of menus) this.receiveMenu(menu);
     for (const draft of drafts) {
       if (this.restaurants.has(draft.choice?.restaurantId) && typeof draft.desired === 'boolean'
@@ -34,7 +48,7 @@ export class PlannerModel {
     }
   }
 
-  receiveMenu(menu) {
+  receiveMenu(menu: Menu) {
     this.menus.set(menuKey(menu.restaurantId, menu.week), menu);
     for (const [id, choice] of this.confirmed) {
       if (choice.restaurantId === menu.restaurantId && choice.week === menu.week) this.confirmed.delete(id);
@@ -51,16 +65,16 @@ export class PlannerModel {
     return [...result.values()];
   }
 
-  changes(restaurantId) {
+  changes(restaurantId?: string) {
     return [...this.drafts.values()].filter(draft => !restaurantId || draft.choice.restaurantId === restaurantId);
   }
 
-  delta(restaurantId) {
+  delta(restaurantId?: string) {
     return this.changes(restaurantId).reduce((total, draft) => total
       + (Number(draft.desired) - Number(this.confirmed.has(draft.choice.id))) * draft.choice.priceRials, 0);
   }
 
-  setDesired(choice, desired) {
+  setDesired(choice: Choice, desired: boolean) {
     if (choice.locked) throw new Error(choice.lockReason || 'This reservation is locked.');
     if (this.confirmed.has(choice.id) === desired && !this.inflight.has(choice.id)) {
       if (this.drafts.delete(choice.id)) this.revision++;
@@ -69,7 +83,7 @@ export class PlannerModel {
     if (this.saves.get(choice.restaurantId)?.state === 'error') this.saves.delete(choice.restaurantId);
   }
 
-  choose(choice) {
+  choose(choice: Choice) {
     if (choice.locked) throw new Error(choice.lockReason || 'This food is locked.');
     const alternatives = this.bookings().filter(item => item.restaurantId === choice.restaurantId
       && slotKey(item) === slotKey(choice) && item.id !== choice.id);
@@ -78,7 +92,7 @@ export class PlannerModel {
     this.setDesired(choice, true);
   }
 
-  discard(restaurantId) {
+  discard(restaurantId: string) {
     if (this.changes(restaurantId).some(draft => this.inflight.has(draft.choice.id))) return false;
     const changes = this.changes(restaurantId);
     for (const draft of changes) this.drafts.delete(draft.choice.id);
@@ -88,18 +102,18 @@ export class PlannerModel {
   }
 
   conflicts() {
-    const buckets = new Map();
+    const buckets = new Map<string, Choice[]>();
     for (const choice of this.bookings()) {
       const restaurant = this.restaurants.get(choice.restaurantId);
-      if (!restaurant.quotaGroup) continue;
+      if (!restaurant?.quotaGroup) continue;
       const key = `${slotKey(choice)}|${restaurant.quotaGroup}`;
       if (!buckets.has(key)) buckets.set(key, []);
-      buckets.get(key).push(choice);
+      buckets.get(key)!.push(choice);
     }
     return [...buckets.values()].filter(choices => choices.length > 1);
   }
 
-  issueFor(restaurantId) {
+  issueFor(restaurantId: string) {
     if (this.conflicts().some(choices => choices.some(choice => choice.restaurantId === restaurantId))) {
       return 'Only one student meal is allowed per slot. Keep one food or use a separate entitlement.';
     }
@@ -107,8 +121,8 @@ export class PlannerModel {
     return null;
   }
 
-  capture(restaurantId) {
-    const changes = this.changes(restaurantId).map(draft => {
+  capture(restaurantId: string) {
+    const changes = this.changes(restaurantId).map((draft): CapturedChange => {
       const current = this.menus.get(menuKey(draft.choice.restaurantId, draft.choice.week))?.choices.find(choice => choice.id === draft.choice.id);
       return { ...draft, expectedReserved: this.confirmed.has(draft.choice.id),
         expectedPriceRials: draft.choice.unitPriceRials ?? draft.choice.priceRials,
@@ -121,7 +135,7 @@ export class PlannerModel {
     return changes;
   }
 
-  commit(changes, balanceRials) {
+  commit(changes: CapturedChange[], balanceRials: number) {
     this.balanceRials = balanceRials;
     this.commitRevision++;
     for (const submitted of changes) {
@@ -139,7 +153,7 @@ export class PlannerModel {
     }
   }
 
-  release(changes) {
+  release(changes: CapturedChange[]) {
     for (const submitted of changes) {
       if (this.inflight.get(submitted.choice.id) === submitted.revision) {
         this.inflight.delete(submitted.choice.id);
@@ -150,7 +164,7 @@ export class PlannerModel {
     }
   }
 
-  exportState() {
+  exportState(): PlannerState {
     return { selectedIds: this.selectedIds, activeId: this.activeId,
       drafts: this.changes(), menus: [...this.menus.values()] };
   }

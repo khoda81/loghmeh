@@ -1,6 +1,9 @@
-import { HOST_PERMISSION, ProbeError, publicError } from './transport.mjs';
+import { HOST_PERMISSION, ProbeError, publicError } from './transport.ts';
+import type { DiningSession } from './dining-session.ts';
+import type { ExtensionApi, MessageListener, RuntimeApi } from './types.ts';
 
-export function createMessageHandler(api, session) {
+export function createMessageHandler(api: RuntimeApi<'id' | 'getURL'> & { permissions: Pick<ExtensionApi['permissions'], 'contains'> },
+  session: Pick<DiningSession, 'probeRead' | 'connect' | 'readMenu' | 'save'>): MessageListener {
   return (message, sender, reply) => {
     if (sender.id !== api.runtime.id) return false;
     const page = sender.url?.split(/[?#]/u)[0];

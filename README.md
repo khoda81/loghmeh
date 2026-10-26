@@ -12,9 +12,10 @@ Independent, unofficial extension for Firefox / Zen 142+ and Chrome / Chromium 1
 
 ## Use in Zen / Firefox
 
-1. Clone this repository, or download the Firefox ZIP from a release and unzip it.
+1. Download the Firefox ZIP from a release and unzip it, or clone this repository
+   and run `bun install --frozen-lockfile && bun run build`.
 2. Open `about:debugging#/runtime/this-firefox` → **Load Temporary Add-on…**.
-3. Select `extension/manifest.json` from your checkout (or the unzipped `manifest.json`).
+3. Select the unzipped `manifest.json` (or `dist/build/manifest.json` from your checkout).
 4. Open **Loghmeh** from the browser toolbar. It connects using that browser's
    dining login. If signed out, use **Open dining login**, sign in normally,
    then **Reconnect dining**.
@@ -31,8 +32,8 @@ drafts stay pending. A note beside Submit says when a pill switch would save.
 The sample-menu link opens
 an isolated simulation if you want to explore the interactions first.
 
-After updating source, click **Reload** in `about:debugging`, then open a new
-Loghmeh tab. Temporary installation ends when removed or the browser restarts.
+After updating source, run `bun run build` again (or keep `bun run build --watch`
+running), click **Reload** in `about:debugging`, then open a new Loghmeh tab. Temporary installation ends when removed or the browser restarts.
 The only host permission is `https://dining2.ut.ac.ir/*`.
 The browser's data-use prompt covers the university session, dining content,
 and reservation/wallet requests. [Privacy policy](PRIVACY.md).
@@ -117,19 +118,20 @@ atomicity remain unverified. See
 
 ## Develop and preview
 
-Bun 1.4.2 or newer runs the tests, syntax checks, preview server, and ZIP
+The extension is written in TypeScript and built with Vite into `dist/build/`.
+Bun 1.4.2 or newer runs the build, tests, type checks, preview server, and ZIP
 packager. CI uses the version pinned in `packageManager`. Install the development
-dependency from the committed Bun lockfile:
+dependencies from the committed Bun lockfile:
 
 ```sh
 bun install --frozen-lockfile
 bun test
-bun run check
-bun run preview
+bun run check     # TypeScript and manifest checks
+bun run preview   # builds dist/preview/ and serves it on port 4173
+bun run dev       # Vite dev server with hot reload, same URLs, no extension CSP
 ```
 
-`fflate` is used only by the ZIP packager; the extension stays as ordinary
-browser modules. Node and Python installations are not required.
+Node and Python installations are not required.
 
 Open <http://localhost:4173/extension/planner.html>. **Localhost always uses
 fictional data and cannot reuse your dining login.** The extension's explicit
@@ -146,8 +148,9 @@ Useful local checks:
 
 `bun run package` builds `dist/loghmeh-0.6.0-firefox.zip` and
 `dist/loghmeh-0.6.0-chrome.zip`, plus unpacked `dist/firefox/` and `dist/chrome/`.
-Packages contain `extension/` and the MIT license; Chrome gets a derived
-manifest. Releases are cut from version tags: see [releasing](docs/releasing.md). Captures, outputs, private checks,
+Packages contain the unminified build and the MIT license; Chrome gets a derived
+manifest. `dist/loghmeh-0.6.0-source.zip` holds the sources that addons.mozilla.org
+reviews alongside a bundled add-on. Releases are cut from version tags: see [releasing](docs/releasing.md). Captures, outputs, private checks,
 and local credentials are ignored and excluded.
 
 The background script owns navigation, preflight, writes, and read-back in a

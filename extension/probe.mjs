@@ -1,11 +1,12 @@
-import { createExtensionClient } from './lib/client.mjs';
-import { publicError } from './lib/transport.mjs';
+import { createExtensionClient } from './lib/client.ts';
+import { publicError } from './lib/transport.ts';
+import { createDemoClient } from './demo.ts';
 
 const $ = id => document.getElementById(id);
 const api = globalThis.browser ?? globalThis.chrome;
 const isExtension = ['moz-extension:', 'chrome-extension:'].includes(location.protocol);
 const client = isExtension ? createExtensionClient(api)
-  : (await import('./demo.mjs')).createDemoClient(new URLSearchParams(location.search).get('scenario'));
+  : createDemoClient(new URLSearchParams(location.search).get('scenario'));
 const report = { app: 'Loghmeh', version: isExtension ? api.runtime.getManifest().version : '0.6.0', environment: client.mode, sessionVerified: false, menuVerified: false, checks: [] };
 let busy = false;
 let permission = false;

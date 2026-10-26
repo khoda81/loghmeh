@@ -59,13 +59,13 @@ refunds; actual refund behavior remains unverified.
 
 ## State and request ownership
 
-- `planner-model.mjs`: independent confirmed menus/bookings, draft intent,
+- `planner-model.ts`: independent confirmed menus/bookings, draft intent,
   captured in-flight revisions, derived totals, and sample rule checks.
-- `planner-controller.mjs`: one request queue, foreground writes before reads,
+- `planner-controller.ts`: one request queue, foreground writes before reads,
   active restaurant reads before other restaurants, and per-restaurant status.
-- `planner-demo.mjs`: deterministic sample menus, artificial latency, a local
+- `planner-demo.ts`: deterministic sample menus, artificial latency, a local
   balance and booking ledger, and optional one-shot failures. No network API.
-- `signed-balance.mjs`: fixed food geometry, pending spending/recovery lanes,
+- `signed-balance.ts`: fixed food geometry, pending spending/recovery lanes,
   and the signed ruler. Model intent and commit revisions distinguish edits
   from confirmations, including newer edits to captured writes.
 - `planner.mjs`: DOM rendering, inline ghost choices, infinite-scroll observation,

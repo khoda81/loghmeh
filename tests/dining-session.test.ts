@@ -1,19 +1,21 @@
 import { test } from 'bun:test';
 import assert from 'node:assert/strict';
-import { DiningSession } from '../extension/lib/dining-session.mjs';
-import { LiveDiningService } from '../extension/lib/planner-live.mjs';
-import { PlannerModel } from '../extension/lib/planner-model.mjs';
-import { PlannerController } from '../extension/lib/planner-controller.mjs';
-import { addDays } from '../extension/lib/planner-model.mjs';
-import { buildDiningRequest, buildReadRequest } from '../extension/lib/transport.mjs';
-import { createMessageHandler } from '../extension/lib/background-bridge.mjs';
+import { DiningSession } from '../extension/lib/dining-session.ts';
+import { LiveDiningService } from '../extension/lib/planner-live.ts';
+import { PlannerModel } from '../extension/lib/planner-model.ts';
+import { PlannerController } from '../extension/lib/planner-controller.ts';
+import { addDays } from '../extension/lib/planner-model.ts';
+import { buildDiningRequest, buildReadRequest } from '../extension/lib/transport.ts';
+import { createMessageHandler } from '../extension/lib/background-bridge.ts';
+import { fake } from './fake.ts';
 
 const current = '2026-10-17';
 const next = '2026-10-24';
 const opaque = (week, foodId) => `rr0fp10dd${week.replaceAll('-', '_')}ppp00-00dt2000_01_01ppp00-00me1dm1fo${foodId}ftf2000_01_01ppp00-00rest20`;
 function fakeDining() {
   const state = { cursor: current, balance: 2000000, identity: 'fictional-test-account', wallets: [{ id: '1', name: 'Sample wallet' }],
-    bookings: new Set(), calls: [], failRead: false, rejectIds: new Set(), loseResponse: false };
+    bookings: new Set<string>(), calls: [], failRead: false, rejectIds: new Set<string>(), loseResponse: false, wrongWeek: false,
+    pause: null as null | ((operation: string) => unknown) };
   const foods = (restaurantId, week) => [1, 2].map(foodId => {
     const id = `${restaurantId}:${week}:${foodId}`;
     const reserved = state.bookings.has(id);
@@ -27,7 +29,7 @@ function fakeDining() {
     return { restaurantId, week: state.cursor, choices, reservedIds: choices.filter(food => food.reserved).map(food => food.id),
       published: true, balanceRials: state.balance };
   };
-  const transport = { async request(operation, parameters = {}) {
+  const transport = { async request(operation: string, parameters: Record<string, any> = {}) {
     state.calls.push({ operation, parameters });
     if (state.pause) await state.pause(operation);
     if (operation === 'bootstrap') return { body: JSON.stringify({ groups: [{ id: '10', name: 'Sample group' }],
@@ -51,7 +53,7 @@ function fakeDining() {
     if (state.failRead) throw new Error('Read failed');
     return { body: JSON.stringify(menu(parameters)) };
   } };
-  const session = new DiningSession({ transport, bootstrapParser: JSON.parse, menuParser: JSON.parse });
+  const session = new DiningSession({ transport: fake(transport), bootstrapParser: html => JSON.parse(html), menuParser: html => JSON.parse(html) });
   return { state, session, foods };
 }
 const intent = (choice, desired) => ({ id: choice.id, desired, expectedReserved: choice.reserved,
@@ -59,15 +61,14 @@ const intent = (choice, desired) => ({ id: choice.id, desired, expectedReserved:
 
 async function connected() {
   const context = fakeDining();
-  context.connection = await context.session.connect();
-  return context;
+  return { ...context, connection: await context.session.connect() };
 }
 
 test('write transport uses the observed form contract and keeps the probe read-only', () => {
   const record = `${opaque(next, 1)}tfco1pco0options||diet:0`;
   const request = buildDiningRequest('submit', { personGroupId: '10', restId: '20', firstEWalletId: '1', records: [record] });
   assert.equal(request.url, 'https://dining2.ut.ac.ir/Reserves/Index');
-  const body = new URLSearchParams(request.init.body);
+  const body = new URLSearchParams(String(request.init.body));
   assert.deepEqual(body.getAll('DataId[]'), [record]);
   assert.equal(body.get('type'), 'Index');
   assert.equal(request.init.credentials, 'include');
@@ -81,8 +82,8 @@ test('connect discovers the current catalogue without assuming demo entitlements
   assert.equal(connection.restaurants.length, 2);
   assert.ok(connection.restaurants.every(restaurant => restaurant.quotaGroup === null));
   assert.equal(connection.writable, true);
-  assert.equal(connection.identity, undefined);
-  assert.equal(connection.walletId, undefined);
+  assert.equal('identity' in connection, false);
+  assert.equal('walletId' in connection, false);
 });
 
 test('week reads verify the actual cursor and do not advance again when already at the target', async () => {
@@ -214,7 +215,7 @@ test('background routing accepts writes only from this extension planner page', 
   const api = { runtime: { id: 'test-extension', getURL: path => `moz-extension://test/${path}` }, permissions: { contains: async () => true } };
   let writes = 0;
   const session = { save: async () => { writes++; return {}; }, probeRead: async operation => { buildReadRequest(operation); } };
-  const handler = createMessageHandler(api, session);
+  const handler = createMessageHandler(api, fake(session));
   const message = { type: 'loghmeh:planner', operation: 'save', parameters: { token: 'x', restaurantId: 'x', week: next, changes: [] } };
   for (const sender of [
     { id: 'other', url: api.runtime.getURL('planner.html') },

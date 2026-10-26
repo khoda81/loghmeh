@@ -1,14 +1,15 @@
 # Releasing
 
-`bun run package` builds both browsers from `extension/`:
+`bun run package` builds `extension/` with Vite into `dist/build/` and packages both browsers:
 
 | Output | Use |
 | --- | --- |
 | `dist/loghmeh-<version>-firefox.zip`, `dist/firefox/` | addons.mozilla.org upload; `web-ext sign` source |
 | `dist/loghmeh-<version>-chrome.zip`, `dist/chrome/` | Chrome Web Store upload; **Load unpacked** |
+| `dist/loghmeh-<version>-source.zip` | addons.mozilla.org source upload (the build is bundled); `web-ext sign --upload-source-code` |
 
 `extension/manifest.json` is the Firefox manifest. The Chrome manifest is derived
-in `scripts/package.mjs`: a module service worker, the `offscreen` permission for
+in `scripts/package.ts`: a module service worker, the `offscreen` permission for
 the page reader, and PNG icons from `extension/icons/` (rendered from `icon.svg`;
 re-render them if the SVG changes).
 
@@ -23,7 +24,8 @@ re-render them if the SVG changes).
    jj git push --tag v0.7.0
    ```
 3. `.github/workflows/release.yml` tests, packages, and creates the GitHub release
-   with both ZIPs attached. Mozilla's validator must also pass without warnings.
+   with the Firefox, Chrome, and source ZIPs attached. Mozilla's validator must
+   also pass without warnings on the built Firefox package.
    Store jobs run only when enabled (below).
 
 ## Store uploads from CI

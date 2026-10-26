@@ -1,14 +1,20 @@
+import type { Diagnostic, PublicError } from './types.ts';
+
 export const DINING_ORIGIN = 'https://dining2.ut.ac.ir';
 export const HOST_PERMISSION = `${DINING_ORIGIN}/*`;
 
-const operations = Object.freeze({
+type ReadOperation = 'bootstrap' | 'restaurants' | 'menu';
+const operations: Readonly<Record<ReadOperation, { path: string; method: 'GET' | 'POST'; fields: string[] }>> = Object.freeze({
   bootstrap: { path: '/Reserves', method: 'GET', fields: [] },
   restaurants: { path: '/Reserves/GetRestaurantByPersonGroup', method: 'POST', fields: ['personGroupId'] },
   menu: { path: '/Reserves/GetReservePage', method: 'POST', fields: ['personGroupId', 'restId'] },
 });
 
 export class ProbeError extends Error {
-  constructor(code, message, diagnostic = {}) {
+  code: string;
+  diagnostic: Diagnostic;
+
+  constructor(code: string, message: string, diagnostic: Diagnostic = {}) {
     super(message);
     this.name = 'ProbeError';
     this.code = code;
@@ -16,22 +22,30 @@ export class ProbeError extends Error {
   }
 }
 
-export function publicError(error) {
+export function publicError(error: unknown): PublicError {
   return error instanceof ProbeError
     ? { code: error.code, message: error.message, diagnostic: error.diagnostic }
     : { code: 'unexpected-error', message: 'The check did not complete. Please try again.', diagnostic: {} };
 }
 
-export function buildReadRequest(operation, parameters = {}) {
+export const errorDetails = (error: unknown) => ({
+  message: error instanceof Error ? error.message : String(error),
+  code: error instanceof ProbeError ? error.code : undefined,
+});
+
+export type RequestParameters = Record<string, unknown>;
+export interface DiningRequest { url: string; init: RequestInit & { method: string }; path: string }
+
+export function buildReadRequest(operation: string, parameters: RequestParameters = {}): DiningRequest {
   if (!Object.hasOwn(operations, operation)) {
     throw new ProbeError('invalid-request', 'This probe only supports reading groups, restaurants, and a menu.');
   }
-  const definition = operations[operation];
+  const definition = operations[operation as ReadOperation];
   if (!parameters || typeof parameters !== 'object' || Array.isArray(parameters)
       || Object.keys(parameters).some(key => !definition.fields.includes(key))) {
     throw new ProbeError('invalid-request', 'Unexpected request fields.');
   }
-  const fields = {};
+  const fields: Record<string, string> = {};
   for (const name of definition.fields) {
     const value = parameters[name];
     if (!['string', 'number'].includes(typeof value) || !/^[1-9]\d{0,11}$/.test(String(value))) {
@@ -40,8 +54,8 @@ export function buildReadRequest(operation, parameters = {}) {
     fields[name] = String(value);
   }
   if (operation === 'menu') fields.isKiosk = 'false';
-  const headers = { Accept: operation === 'restaurants' ? 'application/json' : 'text/html' };
-  const init = { method: definition.method, credentials: 'include', redirect: 'manual', cache: 'no-store', headers };
+  const headers: Record<string, string> = { Accept: operation === 'restaurants' ? 'application/json' : 'text/html' };
+  const init: DiningRequest['init'] = { method: definition.method, credentials: 'include', redirect: 'manual', cache: 'no-store', headers };
   if (definition.method === 'POST') {
     headers['Content-Type'] = 'application/x-www-form-urlencoded; charset=UTF-8';
     headers['X-Requested-With'] = 'XMLHttpRequest';
@@ -50,9 +64,9 @@ export function buildReadRequest(operation, parameters = {}) {
   return { url: DINING_ORIGIN + definition.path, init, path: definition.path };
 }
 
-const navigation = Object.freeze({ current: '/Reserves/GetCurrentReservePage',
+const navigation: Readonly<Record<string, string>> = Object.freeze({ current: '/Reserves/GetCurrentReservePage',
   next: '/Reserves/GetNextReservePage', previous: '/Reserves/GetPreReservePage' });
-export function buildDiningRequest(operation, parameters = {}) {
+export function buildDiningRequest(operation: string, parameters: RequestParameters = {}): DiningRequest {
   if (Object.hasOwn(operations, operation)) return buildReadRequest(operation, parameters);
   if (!Object.hasOwn(navigation, operation) && operation !== 'submit') {
     throw new ProbeError('invalid-request', 'Unknown dining operation.');
@@ -66,13 +80,14 @@ export function buildDiningRequest(operation, parameters = {}) {
     body.set(name, String(parameters[name]));
   }
   if (operation === 'submit') {
-    if (!Array.isArray(parameters.records) || !parameters.records.length || parameters.records.length > 140
-        || parameters.records.some(record => typeof record !== 'string' || record.length > 4000
+    const records = parameters.records;
+    if (!Array.isArray(records) || !records.length || records.length > 140
+        || records.some(record => typeof record !== 'string' || record.length > 4000
           || !/^rr[\w.-]+(?:t|f)fco\d+pco\d+options\|[\d;|-]*\|diet:[01]$/u.test(record))) {
       throw new ProbeError('invalid-request', 'Invalid reservation records.');
     }
     body.set('type', 'Index');
-    for (const record of parameters.records) body.append('DataId[]', record);
+    for (const record of records) body.append('DataId[]', record);
   } else body.set('isKiosk', 'false');
   const path = operation === 'submit' ? '/Reserves/Index' : navigation[operation];
   return { url: DINING_ORIGIN + path, path, init: { method: 'POST', credentials: 'include', redirect: 'manual',
@@ -81,14 +96,17 @@ export function buildDiningRequest(operation, parameters = {}) {
 }
 
 // One shared queue, including across UI tabs. Failed reads do not poison it.
-function createTransport(builder, fetcher, { timeoutMs = 20000 } = {}) {
-  let queue = Promise.resolve();
-  async function perform(operation, parameters) {
+export interface TransportResult { operation: string; body: string; diagnostic: Diagnostic }
+type Fetcher = (url: string, init: RequestInit) => Promise<Response>;
+
+function createTransport(builder: typeof buildDiningRequest, fetcher: Fetcher, { timeoutMs = 20000 } = {}) {
+  let queue: Promise<unknown> = Promise.resolve();
+  async function perform(operation: string, parameters?: RequestParameters): Promise<TransportResult> {
     const { url, init, path } = builder(operation, parameters);
     const started = performance.now();
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
-    const diagnostic = { operation, path, method: init.method, status: null };
+    const diagnostic: Diagnostic = { operation, path, method: init.method, status: null };
     try {
       const response = await fetcher(url, { ...init, signal: controller.signal });
       diagnostic.status = response.status;
@@ -123,10 +141,10 @@ function createTransport(builder, fetcher, { timeoutMs = 20000 } = {}) {
     }
   }
   return {
-    read(operation, parameters) {
+    read(operation: string, parameters?: RequestParameters) {
       const job = queue.then(() => perform(operation, parameters));
       queue = job.catch(() => {});
-      return job.catch(error => {
+      return job.catch((error: unknown): never => {
         // Only predefined messages and request metadata may leave this layer.
         if (error instanceof ProbeError) throw error;
         throw new ProbeError('unexpected-error', 'The check did not complete.');
@@ -135,8 +153,8 @@ function createTransport(builder, fetcher, { timeoutMs = 20000 } = {}) {
   };
 }
 
-export const createReadTransport = (fetcher = fetch, options) => createTransport(buildReadRequest, fetcher, options);
-export const createDiningTransport = (fetcher = fetch, options) => {
+export const createReadTransport = (fetcher: Fetcher = fetch, options?: { timeoutMs?: number }) => createTransport(buildReadRequest, fetcher, options);
+export const createDiningTransport = (fetcher: Fetcher = fetch, options?: { timeoutMs?: number }) => {
   const transport = createTransport(buildDiningRequest, fetcher, options);
   return { request: transport.read };
 };

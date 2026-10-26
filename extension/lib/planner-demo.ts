@@ -1,6 +1,7 @@
-import { addDays, weekOf, slotKey } from './planner-model.mjs';
+import { addDays, weekOf, slotKey } from './planner-model.ts';
+import type { CapturedChange, Choice, Menu, PlannerService, Restaurant, SaveResult } from './types.ts';
 
-export const RESTAURANTS = [
+export const RESTAURANTS: Restaurant[] = [
   { id: 'kooy', group: 'University dorms', name: 'خوابگاه کوی · سلف اصلی', shortName: 'کوی', color: '#47745c', quotaGroup: 'student' },
   { id: 'building6', group: 'University dorms', name: 'خوابگاه · ساختمان ۶', shortName: 'ساختمان ۶', color: '#537e8e', quotaGroup: 'student' },
   { id: 'engineering', group: 'Campus dining', name: 'دانشکده فنی · امیرآباد', shortName: 'فنی', color: '#bb7352', quotaGroup: 'student' },
@@ -15,26 +16,36 @@ const DINNERS = ['خوراک مرغ سوخاری', 'چلو خورش قیمه', '
 const SECONDS = ['خوراک کوکو سیب زمینی', 'خوراک آبگوشت', 'آش جو با نان', 'خوراک دلمه فلفل', 'خوراک همبرگر', 'خوراک ناگت مرغ'];
 
 // Fictional menus and policies. This adapter has no fetch, credentials, or dining URL.
-export class DemoDiningService {
-  constructor({ today, saved, wait = ms => new Promise(resolve => setTimeout(resolve, ms)), delayMs = 650 }) {
+export interface DemoServerState { balanceRials: number; bookings: string[] }
+
+export class DemoDiningService implements PlannerService {
+  today: string;
+  currentWeek: string;
+  wait: (ms: number) => Promise<void>;
+  delayMs: number;
+  failNextSave = false;
+  failNextRead = false;
+  balanceRials: number;
+  bookings: Set<string>;
+
+  constructor({ today, saved, wait = ms => new Promise(resolve => setTimeout(resolve, ms)), delayMs = 650 }:
+    { today: string; saved?: DemoServerState; wait?: (ms: number) => Promise<void>; delayMs?: number }) {
     this.today = today;
     this.currentWeek = weekOf(today);
     this.wait = wait;
     this.delayMs = delayMs;
-    this.failNextSave = false;
-    this.failNextRead = false;
     this.balanceRials = saved?.balanceRials ?? 4_200_000;
     this.bookings = new Set(saved?.bookings ?? [
       this.foods('kooy', this.currentWeek).find(choice => choice.date === today && choice.mealId === '1')?.id,
       this.foods('kooy', addDays(this.currentWeek, 7))[0]?.id,
-    ].filter(Boolean));
+    ].filter(id => id !== undefined));
   }
 
-  foods(restaurantId, week) {
+  foods(restaurantId: string, week: string): Choice[] {
     const restaurant = RESTAURANTS.find(item => item.id === restaurantId);
     const weekDistance = Math.round((Date.parse(week) - Date.parse(this.currentWeek)) / (7 * 86_400_000));
     if (!restaurant || weekDistance > 1 || weekDistance < -8) return [];
-    const choices = [];
+    const choices: Choice[] = [];
     for (let day = 0; day < 7; day++) for (const mealId of ['1', '3']) {
       if (restaurant.quotaGroup === 'student' && (day === 6 || (day === 5 && mealId === '3'))) continue;
       if (['engineering', 'central'].includes(restaurantId) && mealId === '3') continue;
@@ -54,7 +65,7 @@ export class DemoDiningService {
     return choices;
   }
 
-  async readMenu(restaurantId, week) {
+  async readMenu(restaurantId: string, week: string): Promise<Menu> {
     await this.wait(this.delayMs + (restaurantId.length % 3) * 150);
     if (this.failNextRead) { this.failNextRead = false; throw new Error('Could not load this menu. Try again.'); }
     const choices = this.foods(restaurantId, week);
@@ -62,7 +73,7 @@ export class DemoDiningService {
       published: week <= addDays(this.currentWeek, 7) && week >= addDays(this.currentWeek, -56) };
   }
 
-  async save(restaurantId, week, changes) {
+  async save(restaurantId: string, week: string, changes: CapturedChange[]): Promise<SaveResult> {
     await this.wait(this.delayMs * 1.8 + 300);
     if (this.failNextSave) { this.failNextSave = false; throw new Error('Demo server rejected this save. Your choices are kept.'); }
     const foods = this.foods(restaurantId, week);
@@ -74,14 +85,14 @@ export class DemoDiningService {
       cost += (Number(change.desired) - Number(next.has(food.id))) * food.priceRials;
       if (change.desired) next.add(food.id); else next.delete(food.id);
     }
-    const quota = new Map();
+    const quota = new Map<string, number>();
     for (const id of next) {
       const [rid, date, mealId] = id.split(':');
       const restaurant = RESTAURANTS.find(item => item.id === rid);
       if (!restaurant?.quotaGroup) continue;
       const key = `${slotKey({ date, mealId })}|${restaurant.quotaGroup}`;
       quota.set(key, (quota.get(key) || 0) + 1);
-      if (quota.get(key) > 1) throw new Error('Another reservation uses this meal entitlement. Your choices are kept.');
+      if (quota.get(key)! > 1) throw new Error('Another reservation uses this meal entitlement. Your choices are kept.');
     }
     if (cost > this.balanceRials) throw new Error('Not enough balance. Your choices are kept.');
     this.bookings = next;
@@ -89,5 +100,5 @@ export class DemoDiningService {
     return { balanceRials: this.balanceRials };
   }
 
-  exportState() { return { balanceRials: this.balanceRials, bookings: [...this.bookings] }; }
+  exportState(): DemoServerState { return { balanceRials: this.balanceRials, bookings: [...this.bookings] }; }
 }

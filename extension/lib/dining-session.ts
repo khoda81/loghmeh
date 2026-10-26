@@ -1,31 +1,52 @@
-import { ProbeError, buildReadRequest } from './transport.mjs';
-import { parseRestaurants } from './parser.mjs';
-import { parseLiveBootstrap, parseLiveMenu } from './live-parser.mjs';
-import { addDays, weekOf } from './planner-model.mjs';
+import { ProbeError, buildReadRequest, type RequestParameters, type TransportResult } from './transport.ts';
+import { parseRestaurants } from './parser.ts';
+import { parseLiveBootstrap, parseLiveMenu, type LiveBootstrap } from './live-parser.ts';
+import { addDays, weekOf } from './planner-model.ts';
+import type { Connection, LiveSaveResult } from './planner-live.ts';
+import type { Menu, Restaurant } from './types.ts';
 
 const COLORS = ['#47745c', '#537e8e', '#bb7352', '#948044', '#8272a6', '#ae6483', '#4f819f'];
-const colorFor = id => COLORS[[...id].reduce((hash, character) => (hash * 31 + character.charCodeAt(0)) >>> 0, 0) % COLORS.length];
-const validWeek = week => typeof week === 'string' && /^\d{4}-\d{2}-\d{2}$/u.test(week) && weekOf(week) === week;
-const hashIdentity = async identity => identity ? [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(identity)))]
+const colorFor = (id: string) => COLORS[[...id].reduce((hash, character) => (hash * 31 + character.charCodeAt(0)) >>> 0, 0) % COLORS.length];
+const validWeek = (week: unknown): week is string => typeof week === 'string' && /^\d{4}-\d{2}-\d{2}$/u.test(week) && weekOf(week) === week;
+const hashIdentity = async (identity: string | undefined) => identity ? [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(identity)))]
   .map(byte => byte.toString(16).padStart(2, '0')).join('') : null;
 
 // Owns the complete cursor/navigation/write/read-back sequence across every extension tab.
+export interface DiningTransport { request(operation: string, parameters?: RequestParameters): Promise<TransportResult> }
+export type LiveRestaurant = Restaurant & { restId: string; personGroupId: string };
+export interface SessionParsers {
+  bootstrapParser?: (html: string) => LiveBootstrap | Promise<LiveBootstrap>;
+  menuParser?: (html: string, restaurant: LiveRestaurant) => Menu | Promise<Menu>;
+}
+interface SessionContext {
+  restaurants: Map<string, LiveRestaurant>;
+  identityHash: string | null;
+  walletId: string | undefined;
+  balanceRials: number;
+  writable: boolean;
+}
+export interface ChangeRequest { id: string; desired: boolean; expectedReserved: boolean; expectedPriceRials: number; expectedPreviousCount: number }
+
 export class DiningSession {
-  constructor({ transport, bootstrapParser = parseLiveBootstrap, menuParser = parseLiveMenu }) {
+  transport: DiningTransport;
+  bootstrapParser: NonNullable<SessionParsers['bootstrapParser']>;
+  menuParser: NonNullable<SessionParsers['menuParser']>;
+  queue: Promise<unknown> = Promise.resolve();
+  contexts = new Map<string, SessionContext>();
+
+  constructor({ transport, bootstrapParser = parseLiveBootstrap, menuParser = parseLiveMenu }: { transport: DiningTransport } & SessionParsers) {
     this.transport = transport;
     this.bootstrapParser = bootstrapParser;
     this.menuParser = menuParser;
-    this.queue = Promise.resolve();
-    this.contexts = new Map();
   }
 
-  exclusive(action) {
+  exclusive<T>(action: () => Promise<T>) {
     const result = this.queue.then(action);
     this.queue = result.catch(() => {});
     return result;
   }
 
-  probeRead(operation, parameters) {
+  probeRead(operation: string, parameters?: RequestParameters) {
     buildReadRequest(operation, parameters); // The probe never acquires navigation or write access.
     return this.exclusive(() => this.transport.request(operation, parameters));
   }
@@ -36,12 +57,12 @@ export class DiningSession {
   }
 
   connect() {
-    return this.exclusive(async () => {
+    return this.exclusive(async (): Promise<Connection> => {
       const bootstrap = await this.bootstrap();
-      if (!bootstrap.groups.length || !Number.isSafeInteger(bootstrap.balanceRials)) {
+      if (!bootstrap.groups.length || bootstrap.balanceRials === null || !Number.isSafeInteger(bootstrap.balanceRials)) {
         throw new ProbeError('unexpected-response', 'Dining did not supply groups and a readable balance.');
       }
-      const restaurants = [];
+      const restaurants: LiveRestaurant[] = [];
       for (const group of bootstrap.groups) {
         const result = await this.transport.request('restaurants', { personGroupId: group.id });
         for (const restaurant of parseRestaurants(result.body)) {
@@ -58,20 +79,20 @@ export class DiningSession {
         : bootstrap.wallets.length !== 1 ? 'Multiple-wallet spending is not supported yet. Use dining to submit.' : '';
       this.contexts.set(token, { restaurants: new Map(restaurants.map(restaurant => [restaurant.id, restaurant])),
         identityHash, walletId: bootstrap.walletId, balanceRials: bootstrap.balanceRials, writable });
-      while (this.contexts.size > 8) this.contexts.delete(this.contexts.keys().next().value);
+      while (this.contexts.size > 8) this.contexts.delete(this.contexts.keys().next().value!);
       return { token, restaurants, balanceRials: bootstrap.balanceRials, writable, writeReason, accountTag: identityHash,
         walletName: bootstrap.wallets.find(wallet => wallet.id === bootstrap.walletId)?.name || '' };
     });
   }
 
-  context(token, restaurantId) {
-    const context = this.contexts.get(token);
-    const restaurant = context?.restaurants.get(restaurantId);
-    if (!restaurant) throw new ProbeError('reconnect-required', 'Reconnect dining before continuing.');
+  context(token: unknown, restaurantId: unknown) {
+    const context = this.contexts.get(String(token));
+    const restaurant = context?.restaurants.get(String(restaurantId));
+    if (!context || !restaurant) throw new ProbeError('reconnect-required', 'Reconnect dining before continuing.');
     return { context, restaurant };
   }
 
-  async readAtWeek(restaurant, week) {
+  async readAtWeek(restaurant: LiveRestaurant, week: unknown) {
     if (!validWeek(week)) throw new ProbeError('invalid-request', 'Choose a valid Saturday-first week.');
     const parameters = { personGroupId: restaurant.personGroupId, restId: restaurant.restId };
     let response = await this.transport.request('menu', parameters);
@@ -94,14 +115,14 @@ export class DiningSession {
     return menu;
   }
 
-  async balanceFor(menu, context) {
+  async balanceFor(menu: Menu, context: SessionContext) {
     const balance = menu.balanceRials ?? (await this.bootstrap()).balanceRials;
-    if (!Number.isSafeInteger(balance) || balance < 0) throw new ProbeError('unexpected-response', 'Dining did not return a readable balance.');
+    if (typeof balance !== 'number' || !Number.isSafeInteger(balance) || balance < 0) throw new ProbeError('unexpected-response', 'Dining did not return a readable balance.');
     context.balanceRials = balance;
     return balance;
   }
 
-  readMenu(token, restaurantId, week) {
+  readMenu(token: unknown, restaurantId: unknown, week: unknown) {
     return this.exclusive(async () => {
       const { context, restaurant } = this.context(token, restaurantId);
       const menu = await this.readAtWeek(restaurant, week);
@@ -110,8 +131,8 @@ export class DiningSession {
     });
   }
 
-  save(token, restaurantId, week, changes) {
-    return this.exclusive(async () => {
+  save(token: unknown, restaurantId: unknown, week: unknown, changes: ChangeRequest[]) {
+    return this.exclusive(async (): Promise<LiveSaveResult> => {
       const { context, restaurant } = this.context(token, restaurantId);
       if (!context.writable) throw new ProbeError('read-only', 'This account is available for reading only.');
       if (!Array.isArray(changes) || !changes.length || changes.length > 70
@@ -127,7 +148,7 @@ export class DiningSession {
         throw new ProbeError('account-changed', 'The signed-in account or wallet changed. Reconnect before saving.');
       }
       const fresh = await this.readAtWeek(restaurant, week);
-      const records = [];
+      const records: string[] = [];
       for (const change of changes) {
         const choice = fresh.choices.find(choice => choice.id === change.id);
         if (!choice) throw new ProbeError('stale-menu', 'A selected food is no longer on this menu. Refresh it before saving.');
@@ -146,7 +167,7 @@ export class DiningSession {
           submitted = true;
         } catch { /* An HTTP error may follow a successful write. Read-back decides the result. */ }
       }
-      let actual;
+      let actual: Menu;
       try {
         actual = records.length ? await this.readAtWeek(restaurant, week) : fresh;
         actual.balanceRials = await this.balanceFor(actual, context);

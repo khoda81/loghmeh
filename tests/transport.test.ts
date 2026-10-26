@@ -1,6 +1,7 @@
 import { test } from 'bun:test';
 import assert from 'node:assert/strict';
-import { buildReadRequest, createReadTransport, publicError, ProbeError } from '../extension/lib/transport.mjs';
+import { buildReadRequest, createReadTransport, publicError, ProbeError } from '../extension/lib/transport.ts';
+import { fake } from './fake.ts';
 
 test('the transport cannot be redirected to writes or arbitrary URLs', () => {
   for (const operation of ['save', 'Index', '/Reserves/Index', 'https://example.com', '__proto__', 'toString']) {
@@ -27,7 +28,7 @@ test('authenticated reads use browser credentials and do not follow SSO redirect
 
 test('logged-out redirects are recognized without reading the login page', async () => {
   let bodyRead = false;
-  const client = createReadTransport(async () => ({ status: 0, type: 'opaqueredirect', text() { bodyRead = true; } }));
+  const client = createReadTransport(async () => fake({ status: 0, type: 'opaqueredirect', text() { bodyRead = true; } }));
   await assert.rejects(client.read('bootstrap'), { code: 'login-required' });
   assert.equal(bodyRead, false);
 });
@@ -35,7 +36,7 @@ test('logged-out redirects are recognized without reading the login page', async
 test('server errors are not retried or mistaken for authentication', async () => {
   let calls = 0;
   const client = createReadTransport(async () => { calls++; return new Response('private server error', { status: 500 }); });
-  await assert.rejects(client.read('bootstrap'), error => {
+  await assert.rejects(client.read('bootstrap'), (error: ProbeError) => {
     assert.equal(error.code, 'server-error');
     assert.equal(error.diagnostic.status, 500);
     assert.equal(error.diagnostic.path, '/Reserves');
@@ -77,6 +78,6 @@ test('diagnostics never forward arbitrary exception messages or stacks', () => {
   const result = publicError(new Error('cookie=PRIVATE; token=SECRET'));
   assert.equal(JSON.stringify(result).includes('PRIVATE'), false);
   assert.equal(JSON.stringify(result).includes('SECRET'), false);
-  assert.equal(result.stack, undefined);
+  assert.equal('stack' in result, false);
   assert.equal(publicError(new ProbeError('login-required', 'Sign in.')).code, 'login-required');
 });

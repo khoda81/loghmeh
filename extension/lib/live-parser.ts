@@ -1,20 +1,21 @@
-import { parseBootstrap, parseMenu } from './parser.mjs';
-import { ProbeError } from './transport.mjs';
-import { addDays, weekOf } from './planner-model.mjs';
+import { parseBootstrap, parseMenu } from './parser.ts';
+import { ProbeError } from './transport.ts';
+import { addDays, weekOf } from './planner-model.ts';
+import type { Choice, Menu, Restaurant } from './types.ts';
 
-const digits = value => String(value ?? '').replace(/[۰-۹٠-٩]/gu, digit => String('۰۱۲۳۴۵۶۷۸۹'.includes(digit)
+const digits = (value: unknown) => String(value ?? '').replace(/[۰-۹٠-٩]/gu, digit => String('۰۱۲۳۴۵۶۷۸۹'.includes(digit)
   ? '۰۱۲۳۴۵۶۷۸۹'.indexOf(digit) : '٠١٢٣٤٥٦٧٨٩'.indexOf(digit)));
-const number = value => {
+const number = (value: unknown) => {
   const clean = digits(value).replace(/[,،\s]/gu, '');
   return /^\d+$/u.test(clean) && Number.isSafeInteger(Number(clean)) ? Number(clean) : null;
 };
-const invalid = message => new ProbeError('unexpected-response', message);
+const invalid = (message: string) => new ProbeError('unexpected-response', message);
 const persian = new Intl.DateTimeFormat('en-u-ca-persian', { year: 'numeric', month: 'numeric', day: 'numeric', timeZone: 'UTC' });
-const dateCache = new Map();
+const dateCache = new Map<string, string>();
 
 // Use the browser's Persian calendar, including leap years, without executing server scripts.
-export function persianToISO(text) {
-  if (dateCache.has(text)) return dateCache.get(text);
+export function persianToISO(text: string) {
+  if (dateCache.has(text)) return dateCache.get(text)!;
   const parts = digits(text).split('/').map(Number);
   if (parts.length !== 3 || parts.some(value => !Number.isInteger(value))) throw invalid('Unrecognized calendar date.');
   const [year, month, day] = parts;
@@ -36,18 +37,20 @@ export function persianToISO(text) {
   throw invalid('Dining returned an invalid Persian calendar date.');
 }
 
-export function parseLiveBootstrap(html) {
+export type LiveBootstrap = ReturnType<typeof parseLiveBootstrap>;
+
+export function parseLiveBootstrap(html: string) {
   const bootstrap = parseBootstrap(html);
   const doc = new DOMParser().parseFromString(html, 'text/html');
-  const wallet = doc.querySelector('#EWalletId');
+  const wallet = doc.querySelector<HTMLSelectElement>('#EWalletId');
   const wallets = [...(wallet?.options || [])].filter(option => /^[1-9]\d*$/u.test(option.value))
-    .map(option => ({ id: option.value, name: option.textContent.trim() }));
+    .map(option => ({ id: option.value, name: option.textContent?.trim() ?? '' }));
   const credit = doc.querySelector('#headerCredit')?.textContent?.match(/[۰-۹٠-٩\d][۰-۹٠-٩\d,،]*/u)?.[0];
   const identity = digits(doc.querySelector('#divPersonInfo')?.textContent || '').match(/شماره\s*دانشجویی\s*[:：]?\s*(\d{5,})/u)?.[1];
   return { ...bootstrap, wallets, walletId: wallet?.value, balanceRials: number(credit), identity };
 }
 
-export function parseLiveMenu(html, restaurant) {
+export function parseLiveMenu(html: string, restaurant: Pick<Restaurant, 'id' | 'restId'>): Menu {
   const parsed = parseMenu(html);
   const dates = parsed.dates.map(persianToISO);
   const week = dates[0];
@@ -56,10 +59,10 @@ export function parseLiveMenu(html, restaurant) {
   }
   const doc = new DOMParser().parseFromString(html, 'text/html');
   const inputs = [...doc.querySelectorAll('input.reserveFoodCheckBox[type="checkbox"]')];
-  const choices = parsed.choices.map(choice => {
+  const choices = parsed.choices.map((choice): Choice => {
     const copies = inputs.filter(node => node.id.split('---')[0] === choice.serverKey);
     const input = copies[0];
-    const metadata = node => JSON.stringify([node.getAttribute('data-count'), node.getAttribute('data-precount'),
+    const metadata = (node: Element) => JSON.stringify([node.getAttribute('data-count'), node.getAttribute('data-precount'),
       Boolean(node.getAttribute('data-food-options'))]);
     if (copies.some(copy => metadata(copy) !== metadata(input))) throw invalid('Dining copies disagree about food quantities or extras.');
     const key = choice.serverKey;
@@ -67,7 +70,7 @@ export function parseLiveMenu(html, restaurant) {
     const foodId = key.match(/fo(\d+)(?:ftf|rest)/u)?.[1];
     const restId = key.match(/rest(\d+)$/u)?.[1];
     if (!input || !program || !foodId || restId !== restaurant.restId || !dates.includes(choice.date)
-        || !Number.isSafeInteger(choice.priceRials) || choice.priceRials < 0) {
+        || choice.priceRials === null || !Number.isSafeInteger(choice.priceRials) || choice.priceRials < 0) {
       throw invalid('A food does not match the requested restaurant, date, or price.');
     }
     const count = number(input.getAttribute('data-count'));

@@ -6,9 +6,11 @@
   "description": "An independent Firefox and Chrome extension for planning University of Tehran dining reservations with your existing browser login.",
   "scripts": {
     "test": "bun test ./tests",
-    "check": "bun scripts/check.mjs",
-    "preview": "bun scripts/preview.mjs",
-    "package": "bun scripts/package.mjs"
+    "check": "tsc -p . && tsc -p tests && bun scripts/check.ts",
+    "dev": "vite --config vite.config.ts --mode preview",
+    "build": "vite build",
+    "preview": "bun scripts/preview.ts",
+    "package": "bun scripts/package.ts"
   },
   "packageManager": "bun@1.4.2",
   "engines": {
@@ -24,6 +26,12 @@
     "url": "https://github.com/khoda81/loghmeh/issues"
   },
   "devDependencies": {
-    "fflate": "0.8.3"
+    "@sveltejs/vite-plugin-svelte": "7.3.1",
+    "@types/bun": "1.4.4",
+    "fflate": "0.8.3",
+    "svelte": "5.57.2",
+    "svelte-check": "4.7.6",
+    "typescript": "6.0.3",
+    "vite": "8.3.4"
   }
 }

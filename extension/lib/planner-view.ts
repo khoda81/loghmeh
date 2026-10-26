@@ -1,4 +1,4 @@
-import { addDays, tehranToday, weekOf } from './planner-model.mjs';
+import { addDays, tehranToday, weekOf } from './planner-model.ts';
 
 export function calendarClock(now = new Date()) {
   const today = tehranToday(now);
@@ -10,10 +10,10 @@ export function calendarClock(now = new Date()) {
   return { today, currentWeek, nextWeek: addDays(currentWeek, 7), currentMeal: hour < 16 ? '1' : '3' };
 }
 
-export function restoreCalendarWeek(storage, key, fallback) {
+export function restoreCalendarWeek(storage: Pick<Storage, 'getItem'>, key: string, fallback: string) {
   try {
     const week = storage.getItem(key);
-    if (/^\d{4}-\d{2}-\d{2}$/.test(week) && weekOf(week) === week) return week;
+    if (week && /^\d{4}-\d{2}-\d{2}$/.test(week) && weekOf(week) === week) return week;
   } catch { /* Invalid dates or unavailable storage use the default week. */ }
   return fallback;
 }

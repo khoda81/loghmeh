@@ -1,10 +1,10 @@
-import { PlannerModel, MEALS, addDays, menuKey, slotKey } from './lib/planner-model.mjs';
-import { SignedBalanceLedger, signedBalanceTicks } from './lib/signed-balance.mjs';
-import { DemoDiningService, RESTAURANTS } from './lib/planner-demo.mjs';
-import { PlannerController } from './lib/planner-controller.mjs';
-import { LiveDiningService } from './lib/planner-live.mjs';
-import { createExtensionClient } from './lib/client.mjs';
-import { calendarClock, restoreCalendarWeek } from './lib/planner-view.mjs';
+import { PlannerModel, MEALS, addDays, menuKey, slotKey } from './lib/planner-model.ts';
+import { SignedBalanceLedger, signedBalanceTicks } from './lib/signed-balance.ts';
+import { DemoDiningService, RESTAURANTS } from './lib/planner-demo.ts';
+import { PlannerController } from './lib/planner-controller.ts';
+import { LiveDiningService } from './lib/planner-live.ts';
+import { createExtensionClient } from './lib/client.ts';
+import { calendarClock, restoreCalendarWeek } from './lib/planner-view.ts';
 
 // Week navigation owns the calendar position.
 history.scrollRestoration = 'manual';

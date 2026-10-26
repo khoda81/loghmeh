@@ -1,13 +1,14 @@
 import { test } from 'bun:test';
 import assert from 'node:assert/strict';
-import { PlannerModel } from '../extension/lib/planner-model.mjs';
-import { SignedBalanceLedger, signedBalanceTicks } from '../extension/lib/signed-balance.mjs';
+import { PlannerModel } from '../extension/lib/planner-model.ts';
+import { SignedBalanceLedger, signedBalanceTicks } from '../extension/lib/signed-balance.ts';
+import type { Choice, Restaurant } from '../extension/lib/types.ts';
 
-const food = (id, priceRials, restaurantId = 'a', week = '2026-10-24') => ({
-  id, name: id, restaurantId, week, date: week, mealId: '1', priceRials, locked: false,
+const food = (id: string, priceRials: number, restaurantId = 'a', week = '2026-10-24'): Choice => ({
+  id, name: id, restaurantId, week, date: week, mealId: '1', priceRials, locked: false, lockReason: '',
 });
 function setup(confirmed = [], balanceRials = 1000) {
-  const model = new PlannerModel({ restaurants: ['a', 'b', 'c'].map(id => ({ id })), balanceRials,
+  const model = new PlannerModel({ restaurants: ['a', 'b', 'c'].map(id => ({ id }) as Restaurant), balanceRials,
     selectedIds: ['a', 'b', 'c'], activeId: 'a' });
   for (const choice of confirmed) model.confirmed.set(choice.id, choice);
   return { model, ledger: new SignedBalanceLedger() };
@@ -216,7 +217,7 @@ test('newly discovered paid bookings expand the known ledger; commits do not', (
   const { model, ledger } = setup([food('old', 100)]);
   const before = ledger.update(model);
   const found = food('discovered', 200, 'b');
-  model.receiveMenu({ restaurantId: 'b', week: found.week, choices: [found], reservedIds: [found.id] });
+  model.receiveMenu({ restaurantId: 'b', week: found.week, choices: [found], reservedIds: [found.id], published: true });
   const after = ledger.update(model);
   assert.equal(after.extentRials, before.extentRials + 200);
   assert.ok(segment(after, found.id));

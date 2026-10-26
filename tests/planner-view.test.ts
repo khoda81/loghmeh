@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { calendarClock, restoreCalendarWeek } from '../extension/lib/planner-view.mjs';
+import { calendarClock, restoreCalendarWeek } from '../extension/lib/planner-view.ts';
 
 test('calendar clock follows Tehran date, Saturday weeks, and the 16:00 meal boundary', () => {
   expect(calendarClock(new Date('2026-10-26T12:29:59Z'))).toEqual({

@@ -1,7 +1,9 @@
 import path from 'node:path';
+import { buildExtension } from './package.ts';
 
-const root = path.resolve(import.meta.dir, '..');
-const types = { '.html': 'text/html; charset=utf-8', '.mjs': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml' };
+// Serves the preview build (bun run preview builds it first) with the extension's restrictions.
+const root = path.resolve(import.meta.dir, '../dist/preview');
+const types: Record<string, string> = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml' };
 
 export function startPreview({ port = 4173 } = {}) {
   return Bun.serve({
@@ -29,6 +31,7 @@ export function startPreview({ port = 4173 } = {}) {
 }
 
 if (import.meta.main) {
+  await buildExtension('preview');
   const server = startPreview();
   console.log(`Loghmeh planner demo: http://localhost:${server.port}/extension/planner.html`);
 }

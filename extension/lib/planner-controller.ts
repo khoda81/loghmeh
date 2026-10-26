@@ -1,32 +1,46 @@
-import { menuKey } from './planner-model.mjs';
+import { menuKey, type PlannerModel } from './planner-model.ts';
+import { errorDetails } from './transport.ts';
+import type { Choice, PlannerService } from './types.ts';
+
+interface Task {
+  kind: 'read' | 'save';
+  restaurantId: string;
+  week?: string;
+  run(): Promise<void>;
+}
+type QueuedTask = Task & { sequence: number; resolve(): void };
 
 export class PlannerController {
-  constructor({ model, service, onChange = () => {} }) {
+  model: PlannerModel;
+  service: PlannerService;
+  onChange: () => void;
+  queue: QueuedTask[] = [];
+  running: QueuedTask | null = null;
+  activeWeek: string | null = null;
+  saveJobs = new Map<string, Promise<void>>();
+  saveAgain = new Set<string>();
+  message = '';
+  sequence = 0;
+
+  constructor({ model, service, onChange = () => {} }: { model: PlannerModel; service: PlannerService; onChange?: () => void }) {
     this.model = model;
     this.service = service;
     this.onChange = onChange;
-    this.queue = [];
-    this.running = null;
-    this.activeWeek = null;
-    this.saveJobs = new Map();
-    this.saveAgain = new Set();
-    this.message = '';
-    this.sequence = 0;
   }
 
-  changed(message) { if (message) this.message = message; this.onChange(); }
+  changed(message?: string) { if (message) this.message = message; this.onChange(); }
 
-  enqueue(task) {
-    const promise = new Promise(resolve => this.queue.push({ ...task, sequence: this.sequence++, resolve }));
+  enqueue(task: Task) {
+    const promise = new Promise<void>(resolve => this.queue.push({ ...task, sequence: this.sequence++, resolve }));
     queueMicrotask(() => this.pump());
     return promise;
   }
 
   async pump() {
     if (this.running || !this.queue.length) return;
-    const priority = task => task.kind === 'save' ? 0 : task.restaurantId === this.model.activeId ? 1 : 2;
+    const priority = (task: Task) => task.kind === 'save' ? 0 : task.restaurantId === this.model.activeId ? 1 : 2;
     this.queue.sort((a, b) => priority(a) - priority(b) || a.sequence - b.sequence);
-    const task = this.queue.shift();
+    const task = this.queue.shift()!;
     this.running = task;
     try { await task.run(); } finally {
       this.running = null;
@@ -36,7 +50,7 @@ export class PlannerController {
     }
   }
 
-  showWeek(week) {
+  showWeek(week: string) {
     this.activeWeek = week;
     this.cancelReads(task => task.week !== week);
     for (const id of [this.model.activeId, ...this.model.selectedIds.filter(id => id !== this.model.activeId)]) {
@@ -45,16 +59,16 @@ export class PlannerController {
     this.changed();
   }
 
-  cancelReads(matches) {
+  cancelReads(matches: (task: QueuedTask) => boolean) {
     const obsolete = this.queue.filter(task => task.kind === 'read' && matches(task));
     this.queue = this.queue.filter(task => !obsolete.includes(task));
     for (const task of obsolete) {
-      this.model.loads.delete(menuKey(task.restaurantId, task.week));
+      this.model.loads.delete(menuKey(task.restaurantId, task.week!));
       task.resolve();
     }
   }
 
-  load(restaurantId, week, retry = false) {
+  load(restaurantId: string, week: string, retry = false) {
     if (week !== this.activeWeek || !this.model.selectedIds.includes(restaurantId)) return;
     const key = menuKey(restaurantId, week);
     const previous = this.model.loads.get(key);
@@ -69,16 +83,16 @@ export class PlannerController {
         // All adapters must verify returned week dates before committing data here.
         if (menu.restaurantId !== restaurantId || menu.week !== week) throw new Error('The server returned a different week. Please retry.');
         this.model.receiveMenu(menu);
-        if (Number.isSafeInteger(menu.balanceRials)) this.model.balanceRials = menu.balanceRials;
+        if (typeof menu.balanceRials === 'number' && Number.isSafeInteger(menu.balanceRials)) this.model.balanceRials = menu.balanceRials;
         this.model.loads.set(key, { restaurantId, week, state: 'ready' });
       } catch (error) {
-        this.model.loads.set(key, { restaurantId, week, state: 'error', message: error.message, code: error.code });
+        this.model.loads.set(key, { restaurantId, week, state: 'error', ...errorDetails(error) });
       }
       this.changed();
     } });
   }
 
-  select(restaurantId, { submitPrevious = true } = {}) {
+  select(restaurantId: string, { submitPrevious = true } = {}) {
     if (!this.model.selectedIds.includes(restaurantId) || restaurantId === this.model.activeId) return;
     const previous = this.model.activeId;
     if (submitPrevious && previous && this.model.changes(previous).length) this.submit(previous);
@@ -87,7 +101,7 @@ export class PlannerController {
     this.changed();
   }
 
-  add(restaurantId, options) {
+  add(restaurantId: string, options?: { submitPrevious?: boolean }) {
     if (!this.model.restaurants.has(restaurantId)) return false;
     if (!this.model.selectedIds.includes(restaurantId)) this.model.selectedIds.push(restaurantId);
     this.select(restaurantId, options);
@@ -96,7 +110,7 @@ export class PlannerController {
     return true;
   }
 
-  remove(restaurantId) {
+  remove(restaurantId: string) {
     if (this.model.selectedIds.length === 1) return false;
     if (this.model.changes(restaurantId).length || this.saveJobs.has(restaurantId)) {
       this.changed('Submit or undo this restaurant’s changes before removing it.');
@@ -109,26 +123,26 @@ export class PlannerController {
     return true;
   }
 
-  choose(choice) {
+  choose(choice: Choice) {
     try { this.model.choose(choice); this.changed(); return true; }
-    catch (error) { this.changed(error.message); return false; }
+    catch (error) { this.changed(errorDetails(error).message); return false; }
   }
 
-  removeChoice(choice) {
+  removeChoice(choice: Choice) {
     if (!this.model.restaurants.has(choice.restaurantId)) return false;
     try { this.model.setDesired(choice, false); }
-    catch (error) { this.changed(error.message); return false; }
+    catch (error) { this.changed(errorDetails(error).message); return false; }
     // Removing a card is an edit, not a pill switch: keep other drafts pending.
     // Make this cancellation the Submit/Undo context without an implicit save.
     return this.add(choice.restaurantId, { submitPrevious: false });
   }
 
-  submit(restaurantId = this.model.activeId) {
+  submit(restaurantId = this.model.activeId): Promise<void> {
     if (this.service.mode === 'live' && !this.service.writable) {
       this.changed(this.service.writeReason || 'Dining is connected in read-only mode.');
       return Promise.resolve();
     }
-    if (this.saveJobs.has(restaurantId)) { this.saveAgain.add(restaurantId); return this.saveJobs.get(restaurantId); }
+    if (this.saveJobs.has(restaurantId)) { this.saveAgain.add(restaurantId); return this.saveJobs.get(restaurantId)!; }
     if (!this.model.changes(restaurantId).length) return Promise.resolve();
     const issue = this.model.issueFor(restaurantId);
     if (issue) {
@@ -148,7 +162,7 @@ export class PlannerController {
         try {
           const result = await this.service.save(restaurantId, week, batch);
           if (result.menu) {
-            const applied = batch.filter(change => result.appliedIds.includes(change.choice.id));
+            const applied = batch.filter(change => result.appliedIds?.includes(change.choice.id));
             this.model.commit(applied, result.balanceRials);
             this.model.receiveMenu(result.menu);
             completed += applied.length;
@@ -160,15 +174,16 @@ export class PlannerController {
           }
           this.changed();
         } catch (error) {
+          const { message, code } = errorDetails(error);
           this.model.release(changes.filter(change => this.model.inflight.has(change.choice.id)));
-          this.model.saves.set(restaurantId, { state: 'error', message: error.message, code: error.code });
+          this.model.saves.set(restaurantId, { state: 'error', message, code });
           this.saveAgain.delete(restaurantId);
-          this.changed(`${error.message}${completed ? ` ${completed} earlier changes were saved.` : ''}`);
+          this.changed(`${message}${completed ? ` ${completed} earlier changes were saved.` : ''}`);
           return;
         }
       }
       this.model.saves.set(restaurantId, { state: 'saved' });
-      this.changed(`${this.model.restaurants.get(restaurantId).shortName}: ${completed} ${completed === 1 ? 'change' : 'changes'} ${this.service.mode === 'live' ? 'verified with dining' : 'saved in the demo'}.`);
+      this.changed(`${this.model.restaurants.get(restaurantId)?.shortName}: ${completed} ${completed === 1 ? 'change' : 'changes'} ${this.service.mode === 'live' ? 'verified with dining' : 'saved in the demo'}.`);
     } });
     this.saveJobs.set(restaurantId, job);
     job.then(() => {
@@ -180,7 +195,7 @@ export class PlannerController {
     return job;
   }
 
-  retry(restaurantId) {
+  retry(restaurantId: string) {
     if (this.model.changes(restaurantId).length) this.submit(restaurantId);
     if (this.activeWeek) this.load(restaurantId, this.activeWeek, true);
   }

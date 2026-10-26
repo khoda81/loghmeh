@@ -1,10 +1,12 @@
 // The actual planner/client/background/session/parser stack, with only HTTP replaced.
 // No university network request is possible in this fixture.
-import { DiningSession } from '../extension/lib/dining-session.mjs';
-import { createMessageHandler } from '../extension/lib/background-bridge.mjs';
-import { buildDiningRequest } from '../extension/lib/transport.mjs';
-import { bootstrapFixture } from '../extension/demo.mjs';
-import { addDays, weekOf, tehranToday } from '../extension/lib/planner-model.mjs';
+import { DiningSession } from '../extension/lib/dining-session.ts';
+import { createMessageHandler } from '../extension/lib/background-bridge.ts';
+import { buildDiningRequest } from '../extension/lib/transport.ts';
+import { bootstrapFixture } from '../extension/demo.ts';
+import { addDays, weekOf, tehranToday } from '../extension/lib/planner-model.ts';
+import type { ExtensionApi } from '../extension/lib/types.ts';
+import { fake } from './fake.ts';
 const current = weekOf(tehranToday());
 let cursor = current;
 let balance = 2000000;
@@ -21,7 +23,7 @@ function menu(rest) {
   }
   return html;
 }
-const transport = { async request(operation, parameters={}) {
+const transport = { async request(operation: string, parameters: Record<string, any> = {}) {
   buildDiningRequest(operation,parameters);
   await new Promise(resolve=>setTimeout(resolve,120));
   if(operation==='bootstrap') return {body:bootstrapFixture.replace('2,000,000',String(balance))};
@@ -40,11 +42,11 @@ const transport = { async request(operation, parameters={}) {
   }
   return {body:menu(parameters.restId)};
 } };
-const api = { runtime:{id:'loghmeh-test-fixture', getURL:path=>`${location.origin}/extension/${path}`,getManifest:()=>({version:'0.6.0-fixture'})},
+const api: ExtensionApi = { runtime:{id:'loghmeh-test-fixture', sendMessage:null, getURL:path=>`${location.origin}/extension/${path}`,getManifest:()=>({version:'0.6.0-fixture'})},
   permissions:{contains:async()=>true,request:async()=>true},tabs:{create:async()=>{}} };
-const session = new DiningSession({transport});
+const session = new DiningSession({transport:fake(transport)});
 const handler = createMessageHandler(api,session);
-api.runtime.sendMessage = message=>new Promise(resolve=>handler(message,{id:api.runtime.id,url:api.runtime.getURL('planner.html')},result=>{
+api.runtime.sendMessage = message=>new Promise(resolve=>handler(message,{id:api.runtime.id,url:api.runtime.getURL('planner.html')},(result: any)=>{
   if(result.ok&&message.operation==='connect') result.value.fixture=true;
   resolve(result);
 }));
