@@ -1,0 +1,91 @@
+<script lang="ts">
+  import type { PlannerController } from '../lib/planner-controller.ts';
+  import type { LiveDiningService } from '../lib/planner-live.ts';
+  import type { PlannerModel } from '../lib/planner-model.ts';
+  import { mealName, money } from '../lib/planner-view.ts';
+  import { SignedBalanceLedger, signedBalanceTicks } from '../lib/signed-balance.ts';
+
+  let { model, controller, live, revision }: {
+    model: PlannerModel; controller: PlannerController; live: LiveDiningService | null; revision: number;
+  } = $props();
+  const ledger = new SignedBalanceLedger();
+  let trackWidth = $state(0);
+
+  const v = $derived.by(() => {
+    void revision;
+    const ledgerView = ledger.update(model);
+    const count = model.changes(model.activeId).length;
+    return {
+      ledger: ledgerView,
+      busy: controller.saveJobs.has(model.activeId),
+      count,
+      pending: model.changes().length,
+      issue: model.issueFor(model.activeId),
+      readOnly: Boolean(live && !live.writable),
+      writeReason: live?.writeReason,
+      selectedCount: model.selectedIds.length,
+      active: model.restaurants.get(model.activeId)!,
+      segments: ledgerView.segments.map(segment => ({ ...segment, restaurant: model.restaurants.get(segment.choice.restaurantId)! })),
+    };
+  });
+  const projected = $derived(v.ledger.projectedRials);
+  const pendingLabel = $derived.by(() => {
+    const { spendingRials, recoveryRials } = v.ledger;
+    const parts = [spendingRials ? `${money(spendingRials)} spending` : '', recoveryRials ? `${money(recoveryRials)} recovery` : ''].filter(Boolean);
+    return parts.length ? `${parts.join(' · ')} pending` : v.pending ? 'Change queued behind a saving meal' : 'No pending changes';
+  });
+  const ticks = $derived(trackWidth ? signedBalanceTicks(v.ledger, trackWidth) : []);
+  const percent = (fraction: number) => `${fraction * 100}%`;
+  const tickLabel = (value: number) => `${value < 0 ? '−' : ''}${Math.abs(value) >= 1000 ? `${Math.abs(value) / 1000}k` : Math.abs(value)}`;
+  const segmentStatus = { adding: 'Pending food', removing: 'Pending refund', reserved: 'Reserved' };
+
+  function undo() {
+    model.discard(model.activeId);
+    controller.changed();
+  }
+</script>
+
+<div class="wallet">
+  <div class="wallet-top">
+    <div class="wallet-amount"><span class="eyebrow">Your balance</span><strong>{money(v.ledger.balanceRials)}</strong><span class="unit">toman</span></div>
+    <div class="wallet-projection">
+      <span>{pendingLabel}</span><span><span>{live && v.pending ? 'Estimated after saving' : 'After saving'}</span> <strong style:color={projected < 0 ? 'var(--danger)' : null}>{money(projected)}</strong></span>
+    </div>
+    <div class="wallet-actions">
+      <!-- select() submits the outgoing restaurant's changes; say so before a pill click does it. -->
+      <span class="switch-hint" hidden={!v.count || v.busy || v.selectedCount < 2 || v.readOnly}>Saves when you switch restaurant</span>
+      <button class="undo-button" hidden={!v.count} disabled={v.busy} onclick={undo}>Undo changes</button>
+      <button class="submit-button" disabled={!v.count || v.busy || Boolean(v.issue) || v.readOnly}
+        aria-label="Submit changes for {v.active.shortName}"
+        title={(v.readOnly ? v.writeReason || 'Reconnect dining before saving' : '') || v.issue || 'Submit this restaurant’s changes'}
+        onclick={() => controller.submit()}>
+        {v.busy ? 'Saving…' : v.count ? `Submit · ${v.count}` : v.pending ? 'No changes here' : 'All saved'}
+      </button>
+    </div>
+  </div>
+  <div class="balance-track" class:over-budget={projected < 0} role="img" bind:clientWidth={trackWidth}
+    aria-label="Known reservations minus {money(v.ledger.reservedRials)} toman. Available balance {money(v.ledger.balanceRials)}. Pending spending {money(v.ledger.spendingRials)}, recovery {money(v.ledger.recoveryRials)}. After saving {money(projected)}.">
+    <div class="balance-cash" style:left={percent(v.ledger.zeroFraction)}></div>
+    <div class="balance-segments">
+      {#each v.segments as { choice, state, lane, startRials, endRials, restaurant } (choice.id)}
+        <div class="balance-segment {state} lane-{lane}" data-ledger-id={choice.id} data-date={choice.date}
+          style:--restaurant-color={restaurant.color}
+          style:left={percent(startRials / v.ledger.extentRials)}
+          style:width={percent((endRials - startRials) / v.ledger.extentRials)}
+          title="{choice.date} · {mealName(choice.mealId)} · {restaurant.name} · {choice.name} · {money(choice.priceRials)} toman · {segmentStatus[state]}{live && state !== 'reserved' ? ' (estimate)' : ''}"></div>
+      {/each}
+    </div>
+    <div class="balance-zero" style:left={percent(v.ledger.zeroFraction)}></div>
+  </div>
+  <div class="balance-ticks" aria-hidden="true">
+    {#each ticks as tick (tick.value)}
+      <span class:zero-tick={tick.value === 0} data-tick-value={tick.value} style:left={percent(tick.fraction)}>{tickLabel(tick.value)}</span>
+    {/each}
+  </div>
+  <div class="balance-key">
+    <span><i class="ledger-swatch reserved"></i><span>{money(v.ledger.reservedRials)} reserved</span></span>
+    <span><i class="ledger-swatch adding"></i>Pending food</span>
+    <span><i class="ledger-swatch removing"></i>Pending refund</span>
+    <span class="cash-key">0 → balance · available</span>
+  </div>
+</div>

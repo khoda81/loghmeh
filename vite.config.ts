@@ -29,7 +29,8 @@ export default defineConfig(({ mode }) => {
   return {
     root: preview ? repository : at('extension'),
     base: './',
-    plugins: [svelte(), staticFiles(prefix)],
+    // Build DOM with createElement rather than innerHTML templates, which the AMO linter flags.
+    plugins: [svelte({ compilerOptions: { fragments: 'tree' } }), staticFiles(prefix)],
     build: {
       outDir: at(preview ? 'dist/preview' : 'dist/build'),
       emptyOutDir: true,

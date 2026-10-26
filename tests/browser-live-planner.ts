@@ -52,4 +52,4 @@ api.runtime.sendMessage = message=>new Promise(resolve=>handler(message,{id:api.
 }));
 globalThis.browser=api;
 document.title='Loghmeh · live API contract fixture';
-await import('../extension/planner.mjs');
+await import('../extension/planner.ts');

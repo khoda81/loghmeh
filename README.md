@@ -118,7 +118,8 @@ atomicity remain unverified. See
 
 ## Develop and preview
 
-The extension is written in TypeScript and built with Vite into `dist/build/`.
+The extension is written in TypeScript, with the planner UI in Svelte 5, and built
+with Vite into `dist/build/`.
 Bun 1.4.2 or newer runs the build, tests, type checks, preview server, and ZIP
 packager. CI uses the version pinned in `packageManager`. Install the development
 dependencies from the committed Bun lockfile:
@@ -126,7 +127,7 @@ dependencies from the committed Bun lockfile:
 ```sh
 bun install --frozen-lockfile
 bun test
-bun run check     # TypeScript and manifest checks
+bun run check     # svelte-check, TypeScript, and manifest checks
 bun run preview   # builds dist/preview/ and serves it on port 4173
 bun run dev       # Vite dev server with hot reload, same URLs, no extension CSP
 ```

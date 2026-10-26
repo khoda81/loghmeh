@@ -68,8 +68,11 @@ refunds; actual refund behavior remains unverified.
 - `signed-balance.ts`: fixed food geometry, pending spending/recovery lanes,
   and the signed ruler. Model intent and commit revisions distinguish edits
   from confirmations, including newer edits to captured writes.
-- `planner.mjs`: DOM rendering, inline ghost choices, infinite-scroll observation,
-  local demo persistence, and the nested restaurant picker.
+- `planner/*.svelte`: the Svelte UI. `Planner.svelte` owns the mode, connection,
+  local demo persistence, and dialogs; the controller's change callback bumps a
+  revision that the wallet, palette, calendar, and restaurant picker derive from.
+- `planner-view.ts`: framework-free view rules (calendar clock, restaurant status,
+  each slot's cards, ghost choices, and loading/closed/retry state).
 
 Only selected places and relevant weeks are requested. Leaving a week cancels
 queued reads for it; running reads complete. The current week remains queued

@@ -6,7 +6,7 @@
   "description": "An independent Firefox and Chrome extension for planning University of Tehran dining reservations with your existing browser login.",
   "scripts": {
     "test": "bun test ./tests",
-    "check": "tsc -p . && tsc -p tests && bun scripts/check.ts",
+    "check": "svelte-check --fail-on-warnings && tsc -p tests && bun scripts/check.ts",
     "dev": "vite --config vite.config.ts --mode preview",
     "build": "vite build",
     "preview": "bun scripts/preview.ts",
