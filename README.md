@@ -34,6 +34,15 @@ an isolated simulation if you want to explore the interactions first.
 
 After updating source, run `bun run build` again (or keep `bun run build --watch`
 running), click **Reload** in `about:debugging`, then open a new Loghmeh tab. Temporary installation ends when removed or the browser restarts.
+
+If Loghmeh was installed from `extension/manifest.json` before the TypeScript
+migration, use **Load Temporary Add-on…** again and select
+`dist/build/manifest.json`. **Reload** keeps the original installation folder;
+it does not switch to the build output. The source folder contains
+`background.ts`, not the `background.js` Firefox loads. A “Loading failed for
+the module …/background.js” error and an unresponsive toolbar button can mean
+the old source folder is still installed.
+
 The only host permission is `https://dining2.ut.ac.ir/*`.
 The browser's data-use prompt covers the university session, dining content,
 and reservation/wallet requests. [Privacy policy](PRIVACY.md).
