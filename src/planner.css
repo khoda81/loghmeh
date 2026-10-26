@@ -1,4 +1,4 @@
-:root { color-scheme: light; --ink: #263a2e; --muted: #758075; --paper: #f7f5ee; --surface: #fdfcf8; --green: #315b46; --line: #dfe3d9; --active-color: #47745c; --danger: #b54b40; --calendar-height: 520px; }
+:root { color-scheme: light; --ink: #263a2e; --muted: #758075; --paper: #f7f5ee; --surface: #fdfcf8; --green: #315b46; --line: #dfe3d9; --active-color: #47745c; --danger: #b54b40; --calendar-height: 520px; --page-gutter: 28px; }
 * { box-sizing: border-box; }
 body { margin: 0; min-height: 100dvh; color: var(--ink); background: var(--paper); font: 14px/1.5 system-ui, -apple-system, sans-serif; }
 button, input, select { font: inherit; }
@@ -10,7 +10,7 @@ a { color: var(--green); text-decoration: none; }
 a:hover { text-decoration: underline; }
 [hidden] { display: none !important; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-.app-shell { position: relative; flex-shrink: 0; z-index: 10; background: var(--paper); border-bottom: 1px solid var(--line); padding: 0 28px; }
+.app-shell { position: relative; flex-shrink: 0; z-index: 10; background: var(--paper); border-bottom: 1px solid var(--line); padding: 0 var(--page-gutter); }
 .topbar { display: flex; justify-content: space-between; align-items: center; height: 50px; border-bottom: 1px solid var(--line); }
 .brand { display: inline-flex; align-items: center; gap: 9px; color: var(--ink); font-size: 21px; font-weight: 750; letter-spacing: -.8px; }
 .brand span[lang] { font-size: 17px; font-weight: 500; color: var(--muted); margin-left: 6px; }
@@ -24,7 +24,7 @@ a:hover { text-decoration: underline; }
 .live-connection p { margin: 0 0 10px; }
 .live-connection > div { display: flex; align-items: center; gap: 18px; }
 .report-json { width: 100%; min-height: 320px; resize: vertical; border: 1px solid var(--line); border-radius: 6px; padding: 12px; background: var(--paper); color: var(--ink); font: 11px/1.6 monospace; }
-.budget-header { position: sticky; top: 0; z-index: 20; background: var(--paper); border-bottom: 1px solid var(--line); padding: 0 28px; }
+.budget-header { position: sticky; top: 0; z-index: 20; background: var(--paper); border-bottom: 1px solid var(--line); padding: 0 var(--page-gutter); }
 .wallet { padding-top: 12px; }
 .wallet-top { display: flex; align-items: center; gap: 25px; }
 .wallet-amount { display: flex; align-items: baseline; gap: 8px; }
@@ -57,7 +57,7 @@ a:hover { text-decoration: underline; }
 .balance-key > span { display: inline-flex; align-items: center; gap: 5px; }
 .ledger-swatch { display: inline-block; width: 12px; height: 8px; border-radius: 1px; background-color: #6f856c; }
 .balance-key .cash-key { margin-left: auto; }
-.palette-row { padding: 20px 2px 0; }
+.palette-row { padding: 20px 0 0; }
 .palette { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 8px; min-width: 0; }
 .place-token { display: flex; flex: 0 1 auto; min-width: 0; max-width: 100%; align-items: stretch; border-radius: 22px; border: 1px solid #dce1d4; background: transparent; }
 .place-token.active { border-color: var(--restaurant-color); background: color-mix(in srgb, var(--restaurant-color) 9%, var(--paper)); box-shadow: 0 0 0 1px var(--restaurant-color); }
@@ -82,14 +82,20 @@ a:hover { text-decoration: underline; }
 
 
 
-.calendar-main { width: 100%; padding: 0 8px 28px; }
-.week { position: relative; height: var(--calendar-height); --meal-label-width: 64px; }
+.calendar-main { width: 100%; padding: 0 var(--page-gutter) 28px; }
+.week { position: relative; height: var(--calendar-height); --meal-label-width: 47px; }
 .weeks { min-width: 0; }
 .week-scroll { min-width: 0; min-height: 0; height: 100%; }
 .week-grid { height: 100%; display: grid; grid-template-columns: var(--meal-label-width) repeat(7, minmax(0, 1fr)); grid-template-rows: 48px repeat(2, minmax(0, 1fr)); border-top: 1px solid var(--line); }
-.week-controls { position: absolute; top: 0; left: 0; z-index: 2; display: flex; width: var(--meal-label-width); height: 48px; align-items: center; background: var(--paper); }
-.week-arrow { flex: 1; min-width: 0; padding: 0; display: grid; place-items: center; height: 40px; border: 0; border-radius: 6px; background: transparent; color: var(--ink); font-size: 22px; }
-.week-arrow:hover { background: #ecefe5; }
+.week-controls { display: contents; }
+.week-arrow { position: absolute; top: 0; z-index: 2; width: var(--page-gutter); height: 100%; padding: 0; display: grid; place-items: center; border: 0; background: transparent; color: var(--ink); }
+.week-arrow.previous { left: calc(-1 * var(--page-gutter)); }
+.week-arrow.next { right: calc(-1 * var(--page-gutter)); }
+.week-arrow svg { width: min(20px, 100%); opacity: 0; transition: opacity .15s; }
+.week-arrow:hover, .week-arrow:focus-visible { background: #ecefe5; }
+.week-arrow:focus-visible { outline-offset: -3px; }
+.week-arrow:hover svg, .week-arrow:focus-visible svg { opacity: 1; }
+@media (hover: none) { .week-arrow svg { opacity: 1; } }
 .day-heading { padding: 13px 8px 11px; display: flex; gap: 5px; align-items: baseline; justify-content: center; font-size: 11px; color: var(--muted); }
 .day-heading strong { color: var(--ink); font-size: 12px; font-weight: 600; }
 .day-heading.is-today { color: var(--green); background: #e5ecdf; box-shadow: inset 0 3px var(--green); }
@@ -150,15 +156,15 @@ dialog::backdrop { background: #263a2e4d; backdrop-filter: blur(2px); }
 .danger-link { padding: 0; border: 0; background: transparent; color: var(--danger); font-size: 11px; }
 .toast { position: fixed; z-index: 30; bottom: 22px; left: 50%; transform: translateX(-50%); background: #263a2e; color: white; padding: 12px 20px; border-radius: 9px; font-size: 12px; box-shadow: 0 8px 35px #263a2e26; max-width: min(600px, calc(100% - 40px)); }
 @media (max-width: 1000px) {
-  .app-shell, .budget-header { padding: 0 20px; }
-  .calendar-main { padding: 0 8px 24px; }
+  :root { --page-gutter: 20px; }
+  .calendar-main { padding: 0 var(--page-gutter) 24px; }
   .meal-slot { padding: 5px; }
   .food-card { padding: 6px; }
   .food-name { font-size: 11px; }
   .pill-status { max-width: 90px; overflow: hidden; text-overflow: ellipsis; }
 }
 @media (max-width: 720px) {
-  .app-shell, .budget-header { padding: 0 14px; }
+  :root { --page-gutter: 14px; }
   .topbar { height: 50px; }
   .topbar-actions { gap: 10px; }
   .topbar-actions > a { display: none; }
@@ -173,12 +179,10 @@ dialog::backdrop { background: #263a2e4d; backdrop-filter: blur(2px); }
   .submit-button { min-width: 100px; padding: 9px 12px; font-size: 11px; }
   .balance-key { gap: 9px; font-size: 8px; flex-wrap: wrap; }
   .balance-key .cash-key { display: none; }
-  .palette-row { padding: 20px 1px 0; }
   .place-pill { gap: 6px; padding: 6px 10px; min-height: 36px; }
   .pill-name { font-size: 12px; }
   .pill-status { max-width: 64px; font-size: 9px; }
-  .calendar-main { padding: 0 6px 24px; }
-  .week-grid { grid-template-columns: var(--meal-label-width) repeat(7, minmax(132px, 1fr)); min-width: 989px; }
+  .week-grid { grid-template-columns: var(--meal-label-width) repeat(7, minmax(132px, 1fr)); min-width: 972px; }
   .week-scroll { overflow-x: auto; overflow-y: hidden; border-right: 1px solid var(--line); }
   .meal-heading { position: sticky; left: 0; z-index: 1; background: var(--paper); }
   .food-name { font-size: 12px; }
