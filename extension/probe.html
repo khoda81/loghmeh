@@ -6,63 +6,7 @@
   <title>Loghmeh · connection check</title>
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="probe.css">
-  <script type="module" src="./probe.mjs"></script>
+  <script type="module" src="./probe.ts"></script>
 </head>
-<body>
-  <main>
-    <header>
-      <a class="brand" href="probe.html"><img src="icon.svg" alt="" width="40" height="40"><span>loghmeh<span class="persian" lang="fa">لقمه</span></span></a>
-      <a href="planner.html">Try the weekly planner →</a>
-    </header>
-    <div id="preview-notice" class="notice" hidden>Local preview · fictional sample data. This does not test your browser login.</div>
-    <section class="intro">
-      <p class="eyebrow">A SMALL FIRST BITE</p>
-      <h1>Let’s check the connection.</h1>
-      <p>Use your existing dining login to read one menu. Your reservations stay as they are.</p>
-    </section>
-
-    <section class="card" aria-labelledby="connection-title">
-      <div class="section-heading"><span class="step">1</span><h2 id="connection-title">Your dining session</h2><span id="connection-badge" class="badge">Not checked</span></div>
-      <p>Sign in to dining in this browser, then check that Loghmeh can use the session.</p>
-      <div class="actions">
-        <button id="check-session" class="primary" disabled>Check connection</button>
-        <button id="open-login" class="secondary">Open dining login ↗</button>
-        <button id="grant-access" class="secondary" hidden>Allow dining access</button>
-      </div>
-      <p id="connection-status" class="status" role="status" aria-live="polite">Starting…</p>
-      <p id="error" class="error" role="alert" hidden></p>
-    </section>
-
-    <section class="card" aria-labelledby="menu-title">
-      <div class="section-heading"><span class="step">2</span><h2 id="menu-title">Read a menu</h2></div>
-      <p>Choose one place. This reads the server’s currently selected week and does not advance it.</p>
-      <div class="fields">
-        <label>Group<select id="group" disabled dir="auto"><option value="">Check your connection first</option></select></label>
-        <label>Restaurant<select id="restaurant" disabled dir="auto"><option value="">Choose a group first</option></select></label>
-      </div>
-      <button id="read-menu" class="primary" disabled>Read menu</button>
-      <p id="menu-status" class="status" role="status" aria-live="polite"></p>
-      <div id="menu-result" hidden>
-        <div class="stats">
-          <div><strong id="choice-count">0</strong><span>food options</span></div>
-          <div><strong id="reserved-count">0</strong><span>already reserved</span></div>
-          <div><strong id="locked-count">0</strong><span>locked by dining</span></div>
-        </div>
-        <p id="week-dates" dir="auto"></p>
-        <div class="table-wrap"><table>
-          <thead><tr><th>Date · ISO</th><th>Meal</th><th>Food</th><th>Price · rials</th><th>State</th></tr></thead>
-          <tbody id="foods"></tbody>
-        </table></div>
-      </div>
-    </section>
-
-    <details class="card diagnostics">
-      <summary>Connection report</summary>
-      <p>Contains only check results and counts. No passwords, cookies, student details, or raw server pages.</p>
-      <textarea id="report" readonly aria-label="Connection report" spellcheck="false"></textarea>
-      <button id="copy-report" class="secondary">Copy report</button>
-    </details>
-    <footer>Loghmeh · No university reservation submissions, cancellations, or payments.</footer>
-  </main>
-</body>
+<body></body>
 </html>
