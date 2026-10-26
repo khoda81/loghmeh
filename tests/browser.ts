@@ -1,6 +1,6 @@
-import { parseBootstrap, parseRestaurants, parseMenu } from '../extension/lib/parser.ts';
-import { bootstrapFixture, restaurantsFixture, menuFixture } from '../extension/demo.ts';
-import { parseLiveBootstrap, parseLiveMenu, persianToISO } from '../extension/lib/live-parser.ts';
+import { parseBootstrap, parseRestaurants, parseMenu } from '../src/lib/parser.ts';
+import { bootstrapFixture, restaurantsFixture, menuFixture } from '../src/demo.ts';
+import { parseLiveBootstrap, parseLiveMenu, persianToISO } from '../src/lib/live-parser.ts';
 
 let failures = 0;
 let checks = 0;

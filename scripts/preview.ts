@@ -13,10 +13,10 @@ export function startPreview({ port = 4173 } = {}) {
       if (!['GET', 'HEAD'].includes(request.method)) return new Response('Method not allowed', { status: 405, headers: { Allow: 'GET, HEAD' } });
       try {
         const pathname = decodeURIComponent(new URL(request.url).pathname);
-        const filename = path.resolve(root, '.' + (pathname === '/' ? '/extension/planner.html' : pathname));
+        const filename = path.resolve(root, '.' + (pathname === '/' ? '/src/planner.html' : pathname));
         if (!filename.startsWith(root + path.sep)) throw new Error('Not found');
         const relative = '/' + path.relative(root, filename).split(path.sep).join('/');
-        if (!relative.startsWith('/extension/') && !relative.startsWith('/tests/browser')) throw new Error('Not found');
+        if (!relative.startsWith('/src/') && !relative.startsWith('/tests/browser')) throw new Error('Not found');
         const data = await Bun.file(filename).arrayBuffer();
         return new Response(request.method === 'HEAD' ? null : data, { headers: {
           'Content-Type': types[path.extname(filename)] || 'application/octet-stream',
@@ -33,5 +33,5 @@ export function startPreview({ port = 4173 } = {}) {
 if (import.meta.main) {
   await buildExtension('preview');
   const server = startPreview();
-  console.log(`Loghmeh planner demo: http://localhost:${server.port}/extension/planner.html`);
+  console.log(`Loghmeh planner demo: http://localhost:${server.port}/src/planner.html`);
 }

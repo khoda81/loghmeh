@@ -1,8 +1,8 @@
 import { test } from 'bun:test';
 import assert from 'node:assert/strict';
-import { PlannerModel, addDays, weekOf, tehranToday, menuKey } from '../extension/lib/planner-model.ts';
-import { RESTAURANTS, DemoDiningService } from '../extension/lib/planner-demo.ts';
-import { PlannerController } from '../extension/lib/planner-controller.ts';
+import { PlannerModel, addDays, weekOf, tehranToday, menuKey } from '../src/lib/planner-model.ts';
+import { RESTAURANTS, DemoDiningService } from '../src/lib/planner-demo.ts';
+import { PlannerController } from '../src/lib/planner-controller.ts';
 
 const today = '2026-10-22';
 const week = '2026-10-24';

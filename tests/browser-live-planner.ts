@@ -1,11 +1,11 @@
 // The actual planner/client/background/session/parser stack, with only HTTP replaced.
 // No university network request is possible in this fixture.
-import { DiningSession } from '../extension/lib/dining-session.ts';
-import { createMessageHandler } from '../extension/lib/background-bridge.ts';
-import { buildDiningRequest } from '../extension/lib/transport.ts';
-import { bootstrapFixture } from '../extension/demo.ts';
-import { addDays, weekOf, tehranToday } from '../extension/lib/planner-model.ts';
-import type { ExtensionApi } from '../extension/lib/types.ts';
+import { DiningSession } from '../src/lib/dining-session.ts';
+import { createMessageHandler } from '../src/lib/background-bridge.ts';
+import { buildDiningRequest } from '../src/lib/transport.ts';
+import { bootstrapFixture } from '../src/demo.ts';
+import { addDays, weekOf, tehranToday } from '../src/lib/planner-model.ts';
+import type { ExtensionApi } from '../src/lib/types.ts';
 import { fake } from './fake.ts';
 const current = weekOf(tehranToday());
 let cursor = current;
@@ -42,7 +42,7 @@ const transport = { async request(operation: string, parameters: Record<string, 
   }
   return {body:menu(parameters.restId)};
 } };
-const api: ExtensionApi = { runtime:{id:'loghmeh-test-fixture', sendMessage:null, getURL:path=>`${location.origin}/extension/${path}`,getManifest:()=>({version:'0.6.0-fixture'})},
+const api: ExtensionApi = { runtime:{id:'loghmeh-test-fixture', sendMessage:null, getURL:path=>`${location.origin}/src/${path}`,getManifest:()=>({version:'0.6.0-fixture'})},
   permissions:{contains:async()=>true,request:async()=>true},tabs:{create:async()=>{}} };
 const session = new DiningSession({transport:fake(transport)});
 const handler = createMessageHandler(api,session);
@@ -52,4 +52,4 @@ api.runtime.sendMessage = message=>new Promise(resolve=>handler(message,{id:api.
 }));
 globalThis.browser=api;
 document.title='Loghmeh · live API contract fixture';
-await import('../extension/planner.ts');
+await import('../src/planner.ts');

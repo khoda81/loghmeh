@@ -1,6 +1,6 @@
 import { test } from 'bun:test';
 import assert from 'node:assert/strict';
-import { buildReadRequest, createReadTransport, publicError, ProbeError } from '../extension/lib/transport.ts';
+import { buildReadRequest, createReadTransport, publicError, ProbeError } from '../src/lib/transport.ts';
 import { fake } from './fake.ts';
 
 test('the transport cannot be redirected to writes or arbitrary URLs', () => {

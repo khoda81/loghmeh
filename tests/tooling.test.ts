@@ -17,7 +17,7 @@ test('the Bun preview serves the built pages with the sample-mode network restri
   try {
     const page = await fetch(server.url);
     expect(page.status).toBe(200);
-    expect(await page.text()).toBe(await Bun.file(path.join(root, 'dist/preview/extension/planner.html')).text());
+    expect(await page.text()).toBe(await Bun.file(path.join(root, 'dist/preview/src/planner.html')).text());
     expect(page.headers.get('Content-Type')).toContain('text/html');
     expect(page.headers.get('Cache-Control')).toBe('no-store');
     expect(page.headers.get('Content-Security-Policy')).toContain("connect-src 'none'");
@@ -25,7 +25,7 @@ test('the Bun preview serves the built pages with the sample-mode network restri
     const frame = await fetch(new URL('/tests/browser-mobile.html', server.url));
     expect(frame.headers.get('Content-Security-Policy')).toContain("frame-src 'self'");
     await frame.text();
-    const head = await fetch(new URL('/extension/probe.js', server.url), { method: 'HEAD' });
+    const head = await fetch(new URL('/src/probe.js', server.url), { method: 'HEAD' });
     expect(head.status).toBe(200);
     expect(head.headers.get('Content-Type')).toContain('text/javascript');
     expect(await head.text()).toBe('');
@@ -37,7 +37,7 @@ test('the Bun preview serves the built pages with the sample-mode network restri
 test('the Bun preview refuses writes and paths outside its normalized file allowlist', async () => {
   const server = startPreview({ port: 0 });
   try {
-    for (const pathname of ['/package.json', '/work/private.html', '/extension/%2e%2e%2fpackage.json', '/extension/%ff', '/extension/chunks/']) {
+    for (const pathname of ['/package.json', '/work/private.html', '/src/%2e%2e%2fpackage.json', '/src/%ff', '/src/chunks/']) {
       const response = await fetch(new URL(pathname, server.url));
       expect(response.status).toBe(404);
       expect(await response.text()).toBe('Not found');
@@ -93,7 +93,7 @@ test('the Chrome ZIP adds the offscreen page reader, PNG icons, and a service-wo
 
 test('the source ZIP has everything needed to rebuild, and nothing private or generated', async () => {
   const names = Object.keys(unzipSync(await buildSourcePackage()));
-  for (const name of ['package.json', 'bun.lock', 'tsconfig.json', 'vite.config.ts', 'README.md', 'LICENSE', 'extension/manifest.json', 'scripts/package.ts']) {
+  for (const name of ['package.json', 'bun.lock', 'tsconfig.json', 'vite.config.ts', 'README.md', 'LICENSE', 'src/manifest.json', 'scripts/package.ts']) {
     expect(names).toContain(name);
   }
   expect(names.filter(name => /^(?:dist|node_modules|work|outputs|tests\/browser-private)\//u.test(name))).toEqual([]);

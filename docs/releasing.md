@@ -1,6 +1,6 @@
 # Releasing
 
-`bun run package` builds `extension/` with Vite into `dist/build/` and packages both browsers:
+`bun run package` builds `src/` with Vite into `dist/build/` and packages both browsers:
 
 | Output | Use |
 | --- | --- |
@@ -8,14 +8,14 @@
 | `dist/loghmeh-<version>-chrome.zip`, `dist/chrome/` | Chrome Web Store upload; **Load unpacked** |
 | `dist/loghmeh-<version>-source.zip` | addons.mozilla.org source upload (the build is bundled); `web-ext sign --upload-source-code` |
 
-`extension/manifest.json` is the Firefox manifest. The Chrome manifest is derived
+`src/manifest.json` is the Firefox manifest. The Chrome manifest is derived
 in `scripts/package.ts`: a module service worker, the `offscreen` permission for
-the page reader, and PNG icons from `extension/icons/` (rendered from `icon.svg`;
+the page reader, and PNG icons from `src/icons/` (rendered from `icon.svg`;
 re-render them if the SVG changes).
 
 ## Cutting a release
 
-1. Bump `version` in `extension/manifest.json` and `package.json` (CI checks they match).
+1. Bump `version` in `src/manifest.json` and `package.json` (CI checks they match).
 2. Commit with jj and push the `main` bookmark, then tag and push the release:
 
    ```sh

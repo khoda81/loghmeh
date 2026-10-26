@@ -1,12 +1,12 @@
 import { test } from 'bun:test';
 import assert from 'node:assert/strict';
-import { DiningSession } from '../extension/lib/dining-session.ts';
-import { LiveDiningService } from '../extension/lib/planner-live.ts';
-import { PlannerModel } from '../extension/lib/planner-model.ts';
-import { PlannerController } from '../extension/lib/planner-controller.ts';
-import { addDays } from '../extension/lib/planner-model.ts';
-import { buildDiningRequest, buildReadRequest } from '../extension/lib/transport.ts';
-import { createMessageHandler } from '../extension/lib/background-bridge.ts';
+import { DiningSession } from '../src/lib/dining-session.ts';
+import { LiveDiningService } from '../src/lib/planner-live.ts';
+import { PlannerModel } from '../src/lib/planner-model.ts';
+import { PlannerController } from '../src/lib/planner-controller.ts';
+import { addDays } from '../src/lib/planner-model.ts';
+import { buildDiningRequest, buildReadRequest } from '../src/lib/transport.ts';
+import { createMessageHandler } from '../src/lib/background-bridge.ts';
 import { fake } from './fake.ts';
 
 const current = '2026-10-17';

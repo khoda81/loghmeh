@@ -4,6 +4,6 @@
     // Fixtures index known data and fake browser APIs; keep shape checks without null/any strictness.
     "strict": false
   },
-  "include": [".", "../extension/lib/types.ts"],
+  "include": [".", "../src/lib/types.ts"],
   "exclude": ["browser-private"]
 }

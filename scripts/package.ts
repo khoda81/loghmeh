@@ -27,7 +27,7 @@ export const TARGETS: Record<string, { includes(name: string): boolean; manifest
 };
 
 // AMO reviews bundled add-ons against the source and these build instructions.
-const SOURCE_FILES = ['{extension,scripts,tests}/**/*', 'package.json', 'bun.lock', 'tsconfig.json', 'vite.config.ts', 'README.md', 'PRIVACY.md', 'LICENSE'];
+const SOURCE_FILES = ['{src,scripts,tests}/**/*', 'package.json', 'bun.lock', 'tsconfig.json', 'vite.config.ts', 'README.md', 'PRIVACY.md', 'LICENSE'];
 const PRIVATE_SOURCES = /^tests\/browser-private\//u;
 
 export async function buildExtension(mode = 'production') {

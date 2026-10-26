@@ -1,7 +1,7 @@
 import { test } from 'bun:test';
 import assert from 'node:assert/strict';
-import { createOffscreenParsers } from '../extension/lib/offscreen-parsers.ts';
-import { ProbeError } from '../extension/lib/transport.ts';
+import { createOffscreenParsers } from '../src/lib/offscreen-parsers.ts';
+import { ProbeError } from '../src/lib/transport.ts';
 import { fake } from './fake.ts';
 
 function fakeChrome(answer) {

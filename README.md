@@ -35,8 +35,8 @@ an isolated simulation if you want to explore the interactions first.
 After updating source, run `bun run build` again (or keep `bun run build --watch`
 running), click **Reload** in `about:debugging`, then open a new Loghmeh tab. Temporary installation ends when removed or the browser restarts.
 
-If Loghmeh was installed from `extension/manifest.json` before the TypeScript
-migration, use **Load Temporary Add-on…** again and select
+If Loghmeh was installed directly from source before the TypeScript migration,
+use **Load Temporary Add-on…** again and select
 `dist/build/manifest.json`. **Reload** keeps the original installation folder;
 it does not switch to the build output. The source folder contains
 `background.ts`, not the `background.js` Firefox loads. A “Loading failed for
@@ -127,8 +127,8 @@ atomicity remain unverified. See
 
 ## Develop and preview
 
-The extension is written in TypeScript, with the planner UI in Svelte 5, and built
-with Vite into `dist/build/`.
+The editable source lives in `src/`, with TypeScript and a Svelte 5 UI. Vite
+builds the loadable extension into `dist/build/`; load its manifest in Firefox.
 Bun 1.4.2 or newer runs the build, tests, type checks, preview server, and ZIP
 packager. CI uses the version pinned in `packageManager`. Install the development
 dependencies from the committed Bun lockfile:
@@ -143,7 +143,7 @@ bun run dev       # Vite dev server with hot reload, same URLs, no extension CSP
 
 Node and Python installations are not required.
 
-Open <http://localhost:4173/extension/planner.html>. **Localhost always uses
+Open <http://localhost:4173/src/planner.html>. **Localhost always uses
 fictional data and cannot reuse your dining login.** The extension's explicit
 sample mode is `planner.html?demo=1` and keeps separate local sample state.
 
@@ -154,7 +154,7 @@ Useful local checks:
   with fictional HTTP responses; no university requests. Add `?reject=1` to
   exercise business rejection.
 - `/tests/browser-mobile.html` — 390px responsive preview.
-- `/extension/probe.html` — the separate read-only connection probe.
+- `/src/probe.html` — the separate read-only connection probe.
 
 `bun run package` builds `dist/loghmeh-0.6.0-firefox.zip` and
 `dist/loghmeh-0.6.0-chrome.zip`, plus unpacked `dist/firefox/` and `dist/chrome/`.

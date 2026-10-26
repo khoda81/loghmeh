@@ -1,8 +1,8 @@
 import { test } from 'bun:test';
 import assert from 'node:assert/strict';
-import { PlannerModel } from '../extension/lib/planner-model.ts';
-import { SignedBalanceLedger, signedBalanceTicks } from '../extension/lib/signed-balance.ts';
-import type { Choice, Restaurant } from '../extension/lib/types.ts';
+import { PlannerModel } from '../src/lib/planner-model.ts';
+import { SignedBalanceLedger, signedBalanceTicks } from '../src/lib/signed-balance.ts';
+import type { Choice, Restaurant } from '../src/lib/types.ts';
 
 const food = (id: string, priceRials: number, restaurantId = 'a', week = '2026-10-24'): Choice => ({
   id, name: id, restaurantId, week, date: week, mealId: '1', priceRials, locked: false, lockReason: '',

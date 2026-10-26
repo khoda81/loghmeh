@@ -15,19 +15,19 @@ function staticFiles(prefix: string): Plugin {
     generateBundle(_, bundle) {
       for (const name of STATIC_FILES) {
         const fileName = prefix + name;
-        if (!(fileName in bundle)) this.emitFile({ type: 'asset', fileName, source: readFileSync(at(`extension/${name}`)) });
+        if (!(fileName in bundle)) this.emitFile({ type: 'asset', fileName, source: readFileSync(at(`src/${name}`)) });
       }
     },
   };
 }
 
 // The extension build (dist/build/) is the loadable extension root. The preview build
-// keeps the repository layout so the local test pages can sit beside /extension/.
+// keeps the repository layout so the local test pages can sit beside /src/.
 export default defineConfig(({ mode }) => {
   const preview = mode === 'preview';
-  const prefix = preview ? 'extension/' : '';
+  const prefix = preview ? 'src/' : '';
   return {
-    root: preview ? repository : at('extension'),
+    root: preview ? repository : at('src'),
     base: './',
     // Build DOM with createElement rather than innerHTML templates, which the AMO linter flags.
     plugins: [svelte({ compilerOptions: { fragments: 'tree' } }), staticFiles(prefix)],
@@ -42,7 +42,7 @@ export default defineConfig(({ mode }) => {
       modulePreload: false,
       rolldownOptions: {
         input: {
-          ...Object.fromEntries(Object.entries(entries).map(([name, file]) => [prefix + name, at(`extension/${file}`)])),
+          ...Object.fromEntries(Object.entries(entries).map(([name, file]) => [prefix + name, at(`src/${file}`)])),
           ...(preview ? Object.fromEntries(testPages.map(name => [`tests/${name}`, at(`tests/${name}.html`)])) : {}),
         },
         output: {

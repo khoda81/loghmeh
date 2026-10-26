@@ -1,5 +1,5 @@
 name: Release
-# Push a tag such as v0.7.0 that matches extension/manifest.json. The GitHub release
+# Push a tag such as v0.7.0 that matches src/manifest.json. The GitHub release
 # always runs; each store upload runs only when its repository variable is "true".
 on:
   push:
@@ -31,7 +31,7 @@ jobs:
       - run: bun test
       - run: bun run check
       - name: Require the tag to match the manifest version
-        run: test "$GITHUB_REF_NAME" = "v$(jq -r .version extension/manifest.json)"
+        run: test "$GITHUB_REF_NAME" = "v$(jq -r .version src/manifest.json)"
       - run: bun run package
       - run: bunx --bun web-ext@10.7.0 lint --source-dir dist/firefox --warnings-as-errors
       - name: Publish the GitHub release

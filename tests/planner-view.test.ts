@@ -1,8 +1,8 @@
 import { expect, test } from 'bun:test';
-import { calendarClock, restaurantStatus, restoreCalendarWeek, slotView } from '../extension/lib/planner-view.ts';
-import { PlannerController } from '../extension/lib/planner-controller.ts';
-import { RESTAURANTS, DemoDiningService } from '../extension/lib/planner-demo.ts';
-import { PlannerModel } from '../extension/lib/planner-model.ts';
+import { calendarClock, restaurantStatus, restoreCalendarWeek, slotView } from '../src/lib/planner-view.ts';
+import { PlannerController } from '../src/lib/planner-controller.ts';
+import { RESTAURANTS, DemoDiningService } from '../src/lib/planner-demo.ts';
+import { PlannerModel } from '../src/lib/planner-model.ts';
 
 test('calendar clock follows Tehran date, Saturday weeks, and the 16:00 meal boundary', () => {
   expect(calendarClock(new Date('2026-10-26T12:29:59Z'))).toEqual({
