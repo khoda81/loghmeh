@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { Plus, X } from '@lucide/svelte';
   import type { PlannerController } from '../lib/planner-controller.ts';
   import type { PlannerModel } from '../lib/planner-model.ts';
   import { restaurantStatus } from '../lib/planner-view.ts';
@@ -39,9 +40,9 @@
           <button class="retry-pill" aria-label="Retry {restaurant.shortName}" onclick={() => controller.retry(id)}>Retry</button>
         {/if}
         <button class="place-remove" aria-label="Remove {restaurant.shortName} from your palette" disabled={v.single}
-          onclick={() => controller.remove(id)}>×</button>
+          onclick={() => controller.remove(id)}><X size={14} aria-hidden="true" /></button>
       </div>
     {/each}
-    <button class="add-place" aria-haspopup="dialog" aria-label="Add a restaurant" onclick={onadd}><span aria-hidden="true">+</span><span class="add-place-label">Add a restaurant</span></button>
+    <button class="add-place" aria-haspopup="dialog" aria-label="Add a restaurant" onclick={onadd}><Plus size={16} aria-hidden="true" /><span class="add-place-label">Add a restaurant</span></button>
   </div>
 </div>

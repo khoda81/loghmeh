@@ -170,3 +170,6 @@ in-flight revisions. Details: [live integration](docs/live-api.md) and
 ## License
 
 [MIT](LICENSE). This project is not affiliated with the University of Tehran.
+
+Planner action icons use [Lucide for Svelte](https://lucide.dev/guide/svelte) (`@lucide/svelte`).
+Import the icons you need directly in a Svelte component; they are bundled locally with the extension.

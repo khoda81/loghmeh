@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { ArrowLeft, ArrowRight } from '@lucide/svelte';
   import FoodCard from './FoodCard.svelte';
   import type { PlannerController } from '../lib/planner-controller.ts';
   import { MEALS, addDays, type PlannerModel } from '../lib/planner-model.ts';
@@ -45,7 +46,7 @@
 </script>
 
 <section class="week" data-week={week} aria-label="Week of {formatDay(week, 'short')}">
-  <button class="week-arrow previous" aria-label="Previous week" title="Previous week" onclick={onprevious}>←</button>
+  <button class="week-arrow previous" aria-label="Previous week" title="Previous week" onclick={onprevious}><ArrowLeft size={20} aria-hidden="true" /></button>
   <!-- Reset the cells and their scroll position while keeping the week buttons focused. -->
   {#key `${week}|${today}`}
   <div class="week-scroll">
@@ -99,5 +100,5 @@
     </div>
   </div>
   {/key}
-  <button class="week-arrow next" aria-label="Next week" title="Next week" onclick={onnext}>→</button>
+  <button class="week-arrow next" aria-label="Next week" title="Next week" onclick={onnext}><ArrowRight size={20} aria-hidden="true" /></button>
 </section>

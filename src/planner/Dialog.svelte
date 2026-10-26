@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { X } from '@lucide/svelte';
   import type { Snippet } from 'svelte';
 
   let { id, title, eyebrow, closeLabel, children }: {
@@ -24,7 +25,7 @@
     {:else}
       <h2 id="{id}-title">{title}</h2>
     {/if}
-    <button class="icon-button" aria-label={closeLabel} onclick={close}>×</button>
+    <button class="icon-button" aria-label={closeLabel} onclick={close}><X size={22} aria-hidden="true" /></button>
   </div>
   {@render children()}
 </dialog>

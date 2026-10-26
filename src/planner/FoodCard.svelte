@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { X, Undo2 } from '@lucide/svelte';
   import { money } from '../lib/planner-view.ts';
   import type { Choice, Restaurant } from '../lib/types.ts';
 
@@ -21,7 +22,7 @@
   <button type="button" class="food-card is-toggle" class:is-draft={draft} class:is-removing={removing} style:--restaurant-color={restaurant.color}
     data-choice-id={choice.id} data-focus-key="reservation-{choice.id}" {title}
     aria-label="{removable ? 'Remove' : 'Keep'} {choice.name} · {restaurant.name}" onclick={ontoggle}>
-    <span class="card-hint" aria-hidden="true">{removable ? '×' : '↶'}</span>
+    <span class="card-hint" aria-hidden="true">{#if removable}<X size={28} />{:else}<Undo2 size={28} />{/if}</span>
     {@render content()}
   </button>
 {:else}

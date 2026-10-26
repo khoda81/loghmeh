@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { Undo2 } from '@lucide/svelte';
   import type { PlannerController } from '../lib/planner-controller.ts';
   import type { LiveDiningService } from '../lib/planner-live.ts';
   import type { PlannerModel } from '../lib/planner-model.ts';
@@ -54,7 +55,7 @@
     <div class="wallet-actions">
       <!-- select() submits the outgoing restaurant's changes; say so before a pill click does it. -->
       <span class="switch-hint" hidden={!v.count || v.busy || v.selectedCount < 2 || v.readOnly}>Saves when you switch restaurant</span>
-      <button class="undo-button" hidden={!v.count} disabled={v.busy} onclick={undo}>Undo changes</button>
+      <button class="undo-button" hidden={!v.count} disabled={v.busy} onclick={undo}><Undo2 size={14} aria-hidden="true" />Undo changes</button>
       <button class="submit-button" disabled={!v.count || v.busy || Boolean(v.issue) || v.readOnly}
         aria-label="Submit changes for {v.active.shortName}"
         title={(v.readOnly ? v.writeReason || 'Reconnect dining before saving' : '') || v.issue || 'Submit this restaurant’s changes'}
