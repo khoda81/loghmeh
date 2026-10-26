@@ -46,7 +46,10 @@
 </script>
 
 <section class="week" data-week={week} aria-label="Week of {formatDay(week, 'short')}">
-  <button class="week-arrow previous" aria-label="Previous week" title="Previous week" onclick={onprevious}><ArrowLeft size={20} aria-hidden="true" /></button>
+  <div class="week-controls" role="group" aria-label="Calendar week">
+    <button class="week-arrow previous" aria-label="Previous week" title="Previous week" onclick={onprevious}><ArrowLeft size={20} aria-hidden="true" /></button>
+    <button class="week-arrow next" aria-label="Next week" title="Next week" onclick={onnext}><ArrowRight size={20} aria-hidden="true" /></button>
+  </div>
   <!-- Reset the cells and their scroll position while keeping the week buttons focused. -->
   {#key `${week}|${today}`}
   <div class="week-scroll">
@@ -100,5 +103,4 @@
     </div>
   </div>
   {/key}
-  <button class="week-arrow next" aria-label="Next week" title="Next week" onclick={onnext}><ArrowRight size={20} aria-hidden="true" /></button>
 </section>

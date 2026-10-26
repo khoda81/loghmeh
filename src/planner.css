@@ -82,15 +82,14 @@ a:hover { text-decoration: underline; }
 
 
 
-.calendar-main { width: 100%; padding: 16px 28px 28px; }
-.week { height: var(--calendar-height); display: grid; grid-template-columns: 36px minmax(0, 1fr) 36px; column-gap: 6px; }
+.calendar-main { width: 100%; padding: 0 8px 28px; }
+.week { position: relative; height: var(--calendar-height); --meal-label-width: 64px; }
 .weeks { min-width: 0; }
-.week-scroll { grid-column: 2; grid-row: 1; min-width: 0; min-height: 0; height: 100%; }
-.week-grid { height: 100%; display: grid; grid-template-columns: 47px repeat(7, minmax(0, 1fr)); grid-template-rows: 48px repeat(2, minmax(0, 1fr)); border-top: 1px solid var(--line); }
-.week-arrow { grid-row: 1; align-self: start; display: grid; place-items: center; height: 48px; border: 0; border-radius: 6px; background: transparent; color: var(--ink); font-size: 22px; }
+.week-scroll { min-width: 0; min-height: 0; height: 100%; }
+.week-grid { height: 100%; display: grid; grid-template-columns: var(--meal-label-width) repeat(7, minmax(0, 1fr)); grid-template-rows: 48px repeat(2, minmax(0, 1fr)); border-top: 1px solid var(--line); }
+.week-controls { position: absolute; top: 0; left: 0; z-index: 2; display: flex; width: var(--meal-label-width); height: 48px; align-items: center; background: var(--paper); }
+.week-arrow { flex: 1; min-width: 0; padding: 0; display: grid; place-items: center; height: 40px; border: 0; border-radius: 6px; background: transparent; color: var(--ink); font-size: 22px; }
 .week-arrow:hover { background: #ecefe5; }
-.week-arrow.previous { grid-column: 1; }
-.week-arrow.next { grid-column: 3; }
 .day-heading { padding: 13px 8px 11px; display: flex; gap: 5px; align-items: baseline; justify-content: center; font-size: 11px; color: var(--muted); }
 .day-heading strong { color: var(--ink); font-size: 12px; font-weight: 600; }
 .day-heading.is-today { color: var(--green); background: #e5ecdf; box-shadow: inset 0 3px var(--green); }
@@ -152,7 +151,7 @@ dialog::backdrop { background: #263a2e4d; backdrop-filter: blur(2px); }
 .toast { position: fixed; z-index: 30; bottom: 22px; left: 50%; transform: translateX(-50%); background: #263a2e; color: white; padding: 12px 20px; border-radius: 9px; font-size: 12px; box-shadow: 0 8px 35px #263a2e26; max-width: min(600px, calc(100% - 40px)); }
 @media (max-width: 1000px) {
   .app-shell, .budget-header { padding: 0 20px; }
-  .calendar-main { padding: 16px 20px 24px; }
+  .calendar-main { padding: 0 8px 24px; }
   .meal-slot { padding: 5px; }
   .food-card { padding: 6px; }
   .food-name { font-size: 11px; }
@@ -178,9 +177,8 @@ dialog::backdrop { background: #263a2e4d; backdrop-filter: blur(2px); }
   .place-pill { gap: 6px; padding: 6px 10px; min-height: 36px; }
   .pill-name { font-size: 12px; }
   .pill-status { max-width: 64px; font-size: 9px; }
-  .calendar-main { padding: 12px 14px 24px; }
-  .week { grid-template-columns: 28px minmax(0, 1fr) 28px; column-gap: 2px; }
-  .week-grid { grid-template-columns: 45px repeat(7, minmax(132px, 1fr)); min-width: 970px; }
+  .calendar-main { padding: 0 6px 24px; }
+  .week-grid { grid-template-columns: var(--meal-label-width) repeat(7, minmax(132px, 1fr)); min-width: 989px; }
   .week-scroll { overflow-x: auto; overflow-y: hidden; border-right: 1px solid var(--line); }
   .meal-heading { position: sticky; left: 0; z-index: 1; background: var(--paper); }
   .food-name { font-size: 12px; }
