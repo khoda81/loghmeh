@@ -72,7 +72,7 @@
           style:--restaurant-color={restaurant.color}
           style:left={percent(startRials / v.ledger.extentRials)}
           style:width={percent((endRials - startRials) / v.ledger.extentRials)}
-          title="{choice.date} · {mealName(choice.mealId)} · {restaurant.name} · {choice.name} · {money(choice.priceRials)} toman · {segmentStatus[state]}{live && state !== 'reserved' ? ' (estimate)' : ''}"></div>
+          title={`${choice.name} · ${restaurant.name}\n${choice.date} · ${mealName(choice.mealId)} · ${money(choice.priceRials)} toman · ${segmentStatus[state]}${live && state !== 'reserved' ? ' (estimate)' : ''}`}></div>
       {/each}
     </div>
     <div class="balance-zero" style:left={percent(v.ledger.zeroFraction)}></div>

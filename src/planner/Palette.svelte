@@ -6,8 +6,6 @@
   let { model, controller, week, revision, onadd }: {
     model: PlannerModel; controller: PlannerController; week: string; revision: number; onadd: () => void;
   } = $props();
-  let palette: HTMLElement;
-  let scrolledTo: string | undefined;
 
   const v = $derived.by(() => {
     void revision;
@@ -23,21 +21,10 @@
     document.documentElement.style.setProperty('--active-color', v.activeColor);
   });
 
-  // Keep a newly active place visible inside the scrollable palette without moving the page.
-  $effect(() => {
-    if (v.activeId === scrolledTo) return;
-    scrolledTo = v.activeId;
-    const selected = palette.querySelector<HTMLElement>('.place-token.active');
-    if (!selected) return;
-    const top = selected.offsetTop;
-    const bottom = top + selected.offsetHeight;
-    if (top < palette.scrollTop) palette.scrollTop = top;
-    else if (bottom > palette.scrollTop + palette.clientHeight) palette.scrollTop = bottom - palette.clientHeight;
-  });
 </script>
 
 <div class="palette-row">
-  <div class="palette" role="group" aria-label="Restaurants" bind:this={palette}>
+  <div class="palette" role="group" aria-label="Restaurants">
     {#each v.places as { id, restaurant, status } (id)}
       <div class="place-token" class:active={id === v.activeId} class:has-error={status.error} style:--restaurant-color={restaurant.color}>
         <button class="place-pill" data-restaurant-id={id} aria-pressed={id === v.activeId}
@@ -55,6 +42,6 @@
           onclick={() => controller.remove(id)}>×</button>
       </div>
     {/each}
+    <button class="add-place" aria-haspopup="dialog" aria-label="Add a restaurant" onclick={onadd}><span aria-hidden="true">+</span><span class="add-place-label">Add a restaurant</span></button>
   </div>
-  <button class="add-place" aria-haspopup="dialog" aria-label="Add a restaurant" onclick={onadd}><span aria-hidden="true">+</span><span class="add-place-label">Add a restaurant</span></button>
 </div>

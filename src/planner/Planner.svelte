@@ -194,28 +194,20 @@
       </div>
     </div>
   {/if}
-  {#if model && controller}
-    <Wallet {model} {controller} {live} {revision} />
-    <Palette {model} {controller} {revision} week={activeWeek} onadd={() => placePicker?.open()} />
-    <div class="calendar-toolbar">
-      <nav class="week-navigation" aria-label="Calendar week">
-        <button aria-label="Previous week" title="Previous week" onclick={() => showWeek(addDays(activeWeek, -7))}>←</button>
-        <button aria-pressed={activeWeek === clock.currentWeek} onclick={() => showWeek(clock.currentWeek)}>This week</button>
-        <button aria-label="Next week" title="Next week" onclick={() => showWeek(addDays(activeWeek, 7))}>→</button>
-      </nav>
-    </div>
-  {/if}
 </header>
 
 {#if model && controller}
+  <div class="budget-header">
+    <Wallet {model} {controller} {live} {revision} />
+  </div>
+
   <main class="calendar-main" aria-label="Meal calendar">
     <div class="planner-warning" role="alert" hidden={!issue}>{issue ?? ''}</div>
     <div class="weeks">
-      <!-- A new week or day starts from fresh cells, including each cell's scroll position. -->
-      {#key `${activeWeek}|${clock.today}`}
-        <WeekCalendar {model} {controller} {revision} week={activeWeek} today={clock.today} currentMeal={clock.currentMeal} />
-      {/key}
+      <WeekCalendar {model} {controller} {revision} week={activeWeek} today={clock.today} currentMeal={clock.currentMeal}
+        onprevious={() => showWeek(addDays(activeWeek, -7))} onnext={() => showWeek(addDays(activeWeek, 7))} />
     </div>
+    <Palette {model} {controller} {revision} week={activeWeek} onadd={() => placePicker?.open()} />
   </main>
   <PlacePicker bind:this={placePicker} {model} {controller} {revision} />
 {/if}

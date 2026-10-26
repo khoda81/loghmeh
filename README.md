@@ -19,8 +19,8 @@ Independent, unofficial extension for Firefox / Zen 142+ and Chrome / Chromium 1
 4. Open **Loghmeh** from the browser toolbar. It connects using that browser's
    dining login. If signed out, use **Open dining login**, sign in normally,
    then **Reconnect dining**.
-5. Add your usual restaurants from the nested picker. The scrollable restaurant
-   list shows full names, wrapping long ones. Food options stay visible;
+5. Add your usual restaurants from the nested picker. The restaurant pills below the calendar
+   size to their full names, wrapping long ones when needed. Food options stay visible;
    click one to select it. Hovering an existing reservation shows ×; clicking the
    card stages its removal; clicking it again keeps the reservation. Keyboard
    focus provides the same actions.
@@ -69,13 +69,12 @@ only; a real signed-in session has not yet been checked in Chrome.
   is remembered locally, separately for live and sample mode. Only that week is requested for
   selected restaurants; menus arrive incrementally beside their loading pills.
   Returning to a loaded week reuses its snapshot in the open tab. The calendar
-  fills the viewport; each meal cell scrolls independently and keeps its height
-  when restaurant content changes. Short screens scroll the page instead of
-  shrinking the cells below one card.
-- Use **This week** to see current reservations. Only selected places are checked;
+  has a fixed height; each meal cell scrolls independently. The page scrolls
+  naturally with the budget pinned at the top and restaurant pills below the calendar.
+- Use the arrows beside the calendar day headers to change weeks. Only selected places are checked;
   no other week is scanned in the background.
 - See known paid value below zero and available balance above zero on the ruler. Pending
-  spending and refunds use opposite hatching. Pending amounts are estimates;
+  spending and refunds use opposite hatching. Hover a segment for its food and restaurant. Pending amounts are estimates;
   confirmed balances come from dining. Food segments follow date, meal, place,
   and food order, with pending cancellations hatched in place until confirmed.
   The bar includes known reservations from visited weeks. Amounts use toman.

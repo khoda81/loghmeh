@@ -5,11 +5,12 @@
   import { formatDay, mealName, money, slotView } from '../lib/planner-view.ts';
   import type { Choice } from '../lib/types.ts';
 
-  let { model, controller, week, today, currentMeal, revision }: {
+  let { model, controller, week, today, currentMeal, revision, onprevious, onnext }: {
     model: PlannerModel; controller: PlannerController; week: string; today: string; currentMeal: string; revision: number;
+    onprevious: () => void; onnext: () => void;
   } = $props();
   const days = $derived(Array.from({ length: 7 }, (_, day) => addDays(week, day)));
-  let grid: HTMLElement;
+  let grid = $state<HTMLElement>();
   let focused: HTMLElement | undefined;
 
   const v = $derived.by(() => {
@@ -36,7 +37,7 @@
   // a cancellation is staged). Move focus to the replacement instead of losing it.
   $effect(() => {
     void v;
-    if (!focused || focused.isConnected || document.activeElement !== document.body) return;
+    if (!grid || !focused || focused.isConnected || document.activeElement !== document.body) return;
     const key = focused.dataset.focusKey!;
     const nodes = new Map([...grid.querySelectorAll<HTMLElement>('[data-focus-key]')].map(node => [node.dataset.focusKey, node]));
     (nodes.get(key.replace('ghost-', 'reservation-')) || nodes.get(key) || nodes.get(key.replace('reservation-', 'ghost-')))?.focus({ preventScroll: true });
@@ -44,6 +45,9 @@
 </script>
 
 <section class="week" data-week={week} aria-label="Week of {formatDay(week, 'short')}">
+  <button class="week-arrow previous" aria-label="Previous week" title="Previous week" onclick={onprevious}>←</button>
+  <!-- Reset the cells and their scroll position while keeping the week buttons focused. -->
+  {#key `${week}|${today}`}
   <div class="week-scroll">
     <div class="week-grid" bind:this={grid}
       onfocusin={event => { focused = (event.target as HTMLElement).dataset.focusKey ? event.target as HTMLElement : undefined; }}>
@@ -94,4 +98,6 @@
       {/each}
     </div>
   </div>
+  {/key}
+  <button class="week-arrow next" aria-label="Next week" title="Next week" onclick={onnext}>→</button>
 </section>
