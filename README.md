@@ -173,3 +173,4 @@ in-flight revisions. Details: [live integration](docs/live-api.md) and
 
 Planner action icons use [Lucide for Svelte](https://lucide.dev/guide/svelte) (`@lucide/svelte`).
 Import the icons you need directly in a Svelte component; they are bundled locally with the extension.
+Compact actions and reservation states use icons with hover tooltips and accessible labels.

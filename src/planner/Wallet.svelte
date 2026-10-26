@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Undo2 } from '@lucide/svelte';
+  import { Undo2, Save, Check, CircleMinus, LoaderCircle, Lock } from '@lucide/svelte';
   import type { PlannerController } from '../lib/planner-controller.ts';
   import type { LiveDiningService } from '../lib/planner-live.ts';
   import type { PlannerModel } from '../lib/planner-model.ts';
@@ -55,12 +55,17 @@
     <div class="wallet-actions">
       <!-- select() submits the outgoing restaurant's changes; say so before a pill click does it. -->
       <span class="switch-hint" hidden={!v.count || v.busy || v.selectedCount < 2 || v.readOnly}>Saves when you switch restaurant</span>
-      <button class="undo-button" hidden={!v.count} disabled={v.busy} onclick={undo}><Undo2 size={14} aria-hidden="true" />Undo changes</button>
+      <button class="undo-button" hidden={!v.count} disabled={v.busy} aria-label="Undo changes" title="Undo changes" onclick={undo}><Undo2 size={16} aria-hidden="true" /></button>
       <button class="submit-button" disabled={!v.count || v.busy || Boolean(v.issue) || v.readOnly}
-        aria-label="Submit changes for {v.active.shortName}"
-        title={(v.readOnly ? v.writeReason || 'Reconnect dining before saving' : '') || v.issue || 'Submit this restaurant’s changes'}
+        aria-label={v.busy ? 'Saving changes' : v.count ? `Submit changes for ${v.active.shortName}` : v.pending ? 'No changes here' : 'All saved'}
+        title={(v.readOnly ? v.writeReason || 'Reconnect dining before saving' : '') || v.issue || (v.busy ? 'Saving…' : v.count ? `Submit ${v.count} ${v.count === 1 ? 'change' : 'changes'} for ${v.active.shortName}` : v.pending ? 'No changes here' : 'All saved')}
         onclick={() => controller.submit()}>
-        {v.busy ? 'Saving…' : v.count ? `Submit · ${v.count}` : v.pending ? 'No changes here' : 'All saved'}
+        {#if v.readOnly}<Lock size={18} aria-hidden="true" />
+        {:else if v.busy}<LoaderCircle size={18} class="spinning" aria-hidden="true" />
+        {:else if v.count}<Save size={18} aria-hidden="true" /><span>{v.count}</span>
+        {:else if v.pending}<CircleMinus size={18} aria-hidden="true" />
+        {:else}<Check size={18} aria-hidden="true" />{/if}
+        <span class="sr-only">{v.busy ? 'Saving…' : v.count ? `Submit · ${v.count}` : v.pending ? 'No changes here' : 'All saved'}</span>
       </button>
     </div>
   </div>

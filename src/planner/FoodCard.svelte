@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { X, Undo2 } from '@lucide/svelte';
+  import { X, Undo2, Lock, LoaderCircle, CircleAlert, Pencil } from '@lucide/svelte';
   import { money } from '../lib/planner-view.ts';
   import type { Choice, Restaurant } from '../lib/types.ts';
 
@@ -10,12 +10,14 @@
   // A staged cancellation stays clickable so a stray tap can be taken back in place.
   const restorable = $derived(removing && !saving);
   const state = $derived(failed ? 'Not saved' : saving ? 'Saving…' : removing ? 'Cancel pending' : draft ? 'Draft' : choice.locked ? 'Locked' : '');
-  const title = $derived([choice.name, choice.locked ? choice.lockReason : ''].filter(Boolean).join('\n'));
+  const StatusIcon = $derived(failed ? CircleAlert : saving ? LoaderCircle : removing ? Undo2 : draft ? Pencil : Lock);
+  const statusTitle = $derived([state, choice.locked ? choice.lockReason : ''].filter(Boolean).join(' · '));
+  const title = $derived([choice.name, statusTitle].filter(Boolean).join('\n'));
 </script>
 
 {#snippet content()}
   <span class="food-name" dir="rtl" title={choice.name}>{restaurant.name}</span>
-  <span class="food-card-bottom"><span>{money(choice.priceRials)} t</span>{#if state}<span class:draft-state={draft}>{state}</span>{/if}</span>
+  <span class="food-card-bottom"><span>{money(choice.priceRials)} t</span>{#if state}<span class="status-icon" class:draft-state={draft} class:status-error={failed} role="img" aria-label={statusTitle} title={statusTitle}><StatusIcon size={12} class={saving ? 'spinning' : ''} aria-hidden="true" /></span>{/if}</span>
 {/snippet}
 
 {#if removable || restorable}

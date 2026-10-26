@@ -15,10 +15,11 @@ a:hover { text-decoration: underline; }
 .brand { display: inline-flex; align-items: center; gap: 9px; color: var(--ink); font-size: 21px; font-weight: 750; letter-spacing: -.8px; }
 .brand span[lang] { font-size: 17px; font-weight: 500; color: var(--muted); margin-left: 6px; }
 .brand:hover { text-decoration: none; }
-.topbar-actions { display: flex; align-items: center; gap: 22px; font-size: 12px; }
+.topbar-actions { display: flex; align-items: center; gap: 8px; font-size: 12px; }
 .topbar-actions > a { color: var(--muted); }
+.topbar-actions > a, .topbar-actions > button { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; padding: 0; border-radius: 6px; }
+.topbar-actions > a:hover, .topbar-actions > button:hover { background: #ecefe5; }
 .demo-label { display: flex; align-items: center; gap: 7px; border: 0; background: transparent; padding: 8px 0 8px 8px; font-size: 12px; color: #81754d; }
-.demo-dot { width: 6px; height: 6px; border-radius: 50%; background: #aa914c; }
 .live-label { padding: 8px 0; border: 0; background: transparent; color: var(--green); font-size: 11px; }
 .live-connection { padding: 16px 0; font-size: 12px; }
 .live-connection p { margin: 0 0 10px; }
@@ -35,9 +36,10 @@ a:hover { text-decoration: underline; }
 .wallet-projection { display: flex; flex-direction: column; gap: 1px; margin-left: auto; text-align: right; color: var(--muted); font-size: 11px; }
 .wallet-projection strong { color: var(--ink); font-weight: 600; }
 .wallet-actions { display: flex; align-items: center; gap: 12px; }
+.wallet-actions .undo-button { width: 34px; height: 34px; padding: 0; justify-content: center; }
 .undo-button { display: inline-flex; align-items: center; gap: 5px; border: 0; padding: 8px 0; background: transparent; color: var(--muted); font-size: 11px; }
 .switch-hint { color: var(--muted); font-size: 11px; }
-.submit-button { border: 0; background: var(--active-color); color: white; padding: 10px 19px; border-radius: 8px; min-width: 134px; font-size: 12px; font-weight: 600; transition: background .2s; }
+.submit-button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 38px; border: 0; background: var(--active-color); color: white; padding: 10px 19px; border-radius: 8px; min-width: 44px; font-size: 12px; font-weight: 600; transition: background .2s; }
 .submit-button:not(:disabled):hover { filter: brightness(.94); }
 .submit-button:disabled { background: #e3e7dc; color: #6f7c6b; opacity: 1; }
 .balance-track { position: relative; height: 12px; margin-top: 12px; background: #e3e7db; border-radius: 4px; }
@@ -70,10 +72,13 @@ a:hover { text-decoration: underline; }
 .pill-status.error { color: var(--danger); }
 .place-remove { display: grid; place-items: center; width: 32px; flex-shrink: 0; border: 0; background: transparent; color: #91998a; border-radius: 0 22px 22px 0; padding: 0; }
 .place-remove:hover { color: var(--ink); }
-.retry-pill { background: transparent; border: 0; color: var(--danger); font-size: 10px; border-radius: 20px; padding: 0 9px 0 0; }
+.retry-pill { display: grid; place-items: center; min-width: 30px; padding: 0 6px; background: transparent; border: 0; color: var(--danger); font-size: 10px; border-radius: 20px; }
 .spinner { width: 10px; height: 10px; border: 1.5px solid #d8ded2; border-top-color: var(--restaurant-color); border-radius: 50%; animation: spin .8s linear infinite; flex-shrink: 0; }
+.spinning { animation: spin .8s linear infinite; }
+.status-icon { display: inline-flex; align-items: center; flex-shrink: 0; }
+.status-error { color: var(--danger); }
 @keyframes spin { to { transform: rotate(360deg); } }
-.add-place { display: flex; align-items: center; gap: 5px; border: 1px dashed #c7cfbf; padding: 8px 13px; border-radius: 22px; background: transparent; font-size: 11px; white-space: nowrap; min-height: 36px; }
+.add-place { display: flex; align-items: center; gap: 5px; border: 1px dashed #c7cfbf; border-radius: 22px; background: transparent; font-size: 11px; white-space: nowrap; min-height: 36px; width: 36px; padding: 0; justify-content: center; }
 .add-place:hover { background: #ecefe5; }
 
 .muted { color: var(--muted); }
@@ -168,7 +173,6 @@ dialog::backdrop { background: #263a2e4d; backdrop-filter: blur(2px); }
   :root { --page-gutter: 14px; }
   .topbar { height: 50px; }
   .topbar-actions { gap: 10px; }
-  .topbar-actions > a { display: none; }
   .brand { font-size: 19px; }
   .wallet { padding-top: 12px; }
   .wallet-top { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
@@ -177,7 +181,7 @@ dialog::backdrop { background: #263a2e4d; backdrop-filter: blur(2px); }
   .wallet-projection { font-size: 10px; }
   .wallet-actions { gap: 8px; grid-column: 1 / -1; justify-content: flex-end; }
   .undo-button, .switch-hint { font-size: 10px; }
-  .submit-button { min-width: 100px; padding: 9px 12px; font-size: 11px; }
+  .submit-button { min-width: 40px; padding: 9px 12px; font-size: 11px; }
   .balance-key { gap: 9px; font-size: 8px; flex-wrap: wrap; }
   .balance-key .cash-key { display: none; }
   .place-pill { gap: 6px; padding: 6px 10px; min-height: 36px; }

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { Activity, FileText, RefreshCw, FlaskConical, BookOpen, Plug } from '@lucide/svelte';
   import { onMount } from 'svelte';
   import Dialog from './Dialog.svelte';
   import Palette from './Palette.svelte';
@@ -174,14 +175,14 @@
   <div class="topbar">
     <a class="brand" href={pageUrl('planner.html')}><img src={pageUrl('icon.svg')} width="30" height="30" alt=""><span>loghmeh <span lang="fa">لقمه</span></span></a>
     <div class="topbar-actions">
-      <a href={pageUrl('probe.html')}>Connection probe</a>
+      <a href={pageUrl('probe.html')} aria-label="Connection probe" title="Connection probe"><Activity size={18} aria-hidden="true" /></a>
       {#if live}
-        <a href={pageUrl('planner.html?demo=1')}>Sample menus</a>
-        <button class="live-label" onclick={openReport}>Report</button>
-        <button class="live-label" disabled={connecting} onclick={connectDining}>{connection.liveLabel}</button>
+        <a href={pageUrl('planner.html?demo=1')} aria-label="Sample menus" title="Sample menus"><BookOpen size={18} aria-hidden="true" /></a>
+        <button class="live-label" aria-label="Report" title="Connection report" onclick={openReport}><FileText size={18} aria-hidden="true" /></button>
+        <button class="live-label" disabled={connecting} aria-label={connection.liveLabel} title={connection.liveLabel} onclick={connectDining}><RefreshCw size={18} class={connecting ? 'spinning' : ''} aria-hidden="true" /></button>
       {:else}
-        {#if extensionApi}<a href={pageUrl('planner.html')}>Connect dining</a>{/if}
-        <button class="demo-label" onclick={() => simulation?.open()}>Interactive demo <span class="demo-dot"></span></button>
+        {#if extensionApi}<a href={pageUrl('planner.html')} aria-label="Connect dining" title="Connect dining"><Plug size={18} aria-hidden="true" /></a>{/if}
+        <button class="demo-label" aria-label="Interactive demo" title="Interactive demo" onclick={() => simulation?.open()}><FlaskConical size={18} aria-hidden="true" /></button>
       {/if}
     </div>
   </div>

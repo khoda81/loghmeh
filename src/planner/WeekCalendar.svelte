@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { ArrowLeft, ArrowRight } from '@lucide/svelte';
+  import { ArrowLeft, ArrowRight, RefreshCw, LoaderCircle, Lock } from '@lucide/svelte';
   import { WeekScrollGesture } from '../lib/calendar-navigation.ts';
   import FoodCard from './FoodCard.svelte';
   import type { PlannerController } from '../lib/planner-controller.ts';
@@ -146,11 +146,11 @@
                     {/each}
                   </div>
                 {:else if slot.state === 'retry'}
-                  <button class="slot-state" onclick={() => controller.load(v.activeId, week, true)}>Retry menu</button>
+                  <button class="slot-state" aria-label="Retry menu" title="Retry menu" onclick={() => controller.load(v.activeId, week, true)}><RefreshCw size={16} aria-hidden="true" /></button>
                 {:else if slot.state === 'loading'}
-                  <span class="slot-state"><span class="spinner"></span><span>Loading menu</span></span>
+                  <span class="slot-state" role="img" aria-label="Loading menu" title="Loading menu"><LoaderCircle size={14} class="spinning" aria-hidden="true" /></span>
                 {:else if slot.state === 'closed'}
-                  <span class="slot-state">Reservation closed</span>
+                  <span class="slot-state" role="img" aria-label="Reservation closed" title="Reservation closed"><Lock size={14} aria-hidden="true" /></span>
                 {/if}
               </div>
             {/if}
