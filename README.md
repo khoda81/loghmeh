@@ -5,7 +5,7 @@ restaurants as colors, preview foods inside a weekly calendar, and keep your
 choices when the server rejects a request.
 
 Independent, unofficial extension for Firefox / Zen 142+ and Chrome / Chromium 116+.
-**Version 0.6.0 · MIT.** Packages are attached to each
+**Version 0.7.0 · MIT.** Packages are attached to each
 [GitHub release](https://github.com/khoda81/loghmeh/releases).
 
 ![The weekly planner with fictional menus and pending balance changes](docs/assets/planner-demo.jpg)
@@ -117,7 +117,14 @@ viewport and each cell scrolls independently. Slots with no foods stay blank.
 The cross-restaurant cancellation flow was checked in the browser's HTTP fixture
 and a dedicated controller test. [Calendar verification notes](docs/verification/ui-0.6.0.md).
 
-There are 62 passing Bun tests and 20 passing browser parser checks. The
+Version 0.7.0 moves the UI to Svelte 5 and TypeScript, built locally with Vite.
+The calendar has a fixed height, a sticky budget, restaurant pills below it,
+remembered weeks, and directional navigation animations. Use the side gutters,
+Left/Right keys, or Shift+scroll to change weeks. Compact actions and reservation
+states use Lucide icons with tooltips. These interactions were checked against
+fictional menus, including locked reservations and a failed menu request.
+
+There are 69 passing Bun tests and 20 passing browser parser checks. The
 write serializer and reconciliation logic are tested with fictional HTTP
 responses; one live change is verified. General refund behavior and batch
 atomicity remain unverified. See
@@ -155,10 +162,10 @@ Useful local checks:
 - `/tests/browser-mobile.html` — 390px responsive preview.
 - `/src/probe.html` — the separate read-only connection probe.
 
-`bun run package` builds `dist/loghmeh-0.6.0-firefox.zip` and
-`dist/loghmeh-0.6.0-chrome.zip`, plus unpacked `dist/firefox/` and `dist/chrome/`.
-Packages contain the unminified build and the MIT license; Chrome gets a derived
-manifest. `dist/loghmeh-0.6.0-source.zip` holds the sources that addons.mozilla.org
+`bun run package` builds `dist/loghmeh-0.7.0-firefox.zip` and
+`dist/loghmeh-0.7.0-chrome.zip`, plus unpacked `dist/firefox/` and `dist/chrome/`.
+Packages contain the unminified build, the MIT license, and bundled-library notices; Chrome gets a derived
+manifest. `dist/loghmeh-0.7.0-source.zip` holds the sources that addons.mozilla.org
 reviews alongside a bundled add-on. Releases are cut from version tags: see [releasing](docs/releasing.md). Captures, outputs, private checks,
 and local credentials are ignored and excluded.
 

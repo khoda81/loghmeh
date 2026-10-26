@@ -51,7 +51,7 @@ test('the Bun preview refuses writes and paths outside its normalized file allow
   }
 });
 
-const entries = ['LICENSE', 'manifest.json', 'background.js', 'icon.svg', 'planner.html', 'planner.js', 'planner.css', 'probe.html', 'probe.js', 'probe.css'];
+const entries = ['LICENSE', 'THIRD_PARTY_NOTICES.txt', 'manifest.json', 'background.js', 'icon.svg', 'planner.html', 'planner.js', 'planner.css', 'probe.html', 'probe.js', 'probe.css'];
 const chromeOnly = ['offscreen.html', 'offscreen.js', 'icons/icon-16.png', 'icons/icon-32.png', 'icons/icon-48.png', 'icons/icon-128.png'];
 
 // Every page script, stylesheet, image, and module import must resolve inside the package.

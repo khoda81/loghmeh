@@ -7,7 +7,7 @@ const repository = import.meta.dirname;
 const at = (file: string) => path.join(repository, file);
 const entries = { planner: 'planner.html', probe: 'probe.html', offscreen: 'offscreen.html', background: 'background.ts' };
 const testPages = ['browser', 'browser-live-planner', 'browser-mobile'];
-export const STATIC_FILES = ['manifest.json', 'icon.svg', 'icons/icon-16.png', 'icons/icon-32.png', 'icons/icon-48.png', 'icons/icon-128.png'];
+export const STATIC_FILES = ['manifest.json', 'THIRD_PARTY_NOTICES.txt', 'icon.svg', 'icons/icon-16.png', 'icons/icon-32.png', 'icons/icon-48.png', 'icons/icon-128.png'];
 
 function staticFiles(prefix: string): Plugin {
   return {
