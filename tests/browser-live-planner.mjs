@@ -25,7 +25,7 @@ const transport = { async request(operation, parameters={}) {
   buildDiningRequest(operation,parameters);
   await new Promise(resolve=>setTimeout(resolve,120));
   if(operation==='bootstrap') return {body:bootstrapFixture.replace('2,000,000',String(balance))};
-  if(operation==='restaurants') return {body:'[{"id":20,"value":"رستوران نمونه اول"},{"id":21,"value":"رستوران نمونه دوم"}]'};
+  if(operation==='restaurants') return {body:'[{"id":20,"value":"رستوران نمونه اول · بخش مکمل دانشگاه · سلف دانشجویی و غذاهای متنوع با ظرفیت محدود و پیش‌پرداخت"},{"id":21,"value":"رستوران نمونه دوم"}]'};
   if(operation==='current') cursor=current;
   if(operation==='next') cursor=addDays(cursor,7);
   if(operation==='previous') cursor=addDays(cursor,-7);

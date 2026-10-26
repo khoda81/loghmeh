@@ -48,7 +48,7 @@ test('the Bun preview refuses writes and paths outside its normalized file allow
 const shared = ['LICENSE', 'background.mjs', 'demo.mjs', 'icon.svg',
   'lib/background-bridge.mjs', 'lib/client.mjs', 'lib/dining-session.mjs', 'lib/live-parser.mjs', 'lib/offscreen-parsers.mjs',
   'lib/parser.mjs', 'lib/planner-controller.mjs', 'lib/planner-demo.mjs', 'lib/planner-live.mjs',
-  'lib/planner-model.mjs', 'lib/signed-balance.mjs', 'lib/transport.mjs',
+  'lib/planner-model.mjs', 'lib/planner-view.mjs', 'lib/signed-balance.mjs', 'lib/transport.mjs',
   'manifest.json', 'planner.css', 'planner.html', 'planner.mjs', 'probe.css', 'probe.html', 'probe.mjs'];
 const sourceOf = name => name === 'LICENSE' ? path.join(root, name) : path.join(root, 'extension', name);
 

@@ -86,13 +86,14 @@ The live catalogue has no invented entitlement groups. The backend remains
 authoritative for limits. Known reservations cover checked restaurants only,
 not an exhaustive global account ledger. Pending balance effects are estimates;
 the confirmed balance always comes from dining. Full refunds and exact serving
-hours are not assumed. The exact current-meal highlight remains demo-only.
+hours are not assumed. The current-meal highlight is a Tehran clock cue
+(lunch before 16:00, dinner after), independent of the server's serving windows.
 
 ## Authentication and local state
 
 Account identity is hashed in memory to detect a different sign-in before a
 write; raw identifiers are neither returned to the UI nor saved. Local storage
-holds the live restaurant palette only. Real menus, balances, account fields,
+holds the live restaurant palette and viewed week only. Real menus, balances, account fields,
 and reservation drafts are not persisted. Drafts survive failed requests and
 reconnection in the open tab; closing a tab with pending changes warns first.
 An account/catalogue change leaves old drafts in that tab and requires a new

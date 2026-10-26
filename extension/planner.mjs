@@ -1,9 +1,10 @@
-import { PlannerModel, MEALS, addDays, weekOf, tehranToday, menuKey, slotKey } from './lib/planner-model.mjs';
+import { PlannerModel, MEALS, addDays, menuKey, slotKey } from './lib/planner-model.mjs';
 import { SignedBalanceLedger, signedBalanceTicks } from './lib/signed-balance.mjs';
 import { DemoDiningService, RESTAURANTS } from './lib/planner-demo.mjs';
 import { PlannerController } from './lib/planner-controller.mjs';
 import { LiveDiningService } from './lib/planner-live.mjs';
 import { createExtensionClient } from './lib/client.mjs';
+import { calendarClock, restoreCalendarWeek } from './lib/planner-view.mjs';
 
 // Week navigation owns the calendar position.
 history.scrollRestoration = 'manual';
@@ -16,9 +17,7 @@ const el = (tag, className, text) => {
   return node;
 };
 const money = rials => (rials / 10).toLocaleString('en-US', { maximumFractionDigits: 1 });
-const today = tehranToday();
-const currentWeek = weekOf(today);
-const nextWeek = addDays(currentWeek, 7);
+let { today, currentWeek, nextWeek, currentMeal } = calendarClock();
 const storageKey = `loghmeh:planner-demo:v1:${today}`;
 const extensionApi = globalThis.browser ?? globalThis.chrome;
 const isExtension = Boolean(extensionApi?.runtime?.id);
@@ -32,16 +31,15 @@ let model;
 let controller;
 let accountTag;
 let connecting = false;
+const calendarStorageKey = `loghmeh:${isLive ? 'live' : 'demo'}:calendar-week:v1`;
 let activeWeek = nextWeek;
-const faDate = new Intl.DateTimeFormat('fa-IR', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
+try { activeWeek = restoreCalendarWeek(localStorage, calendarStorageKey, nextWeek); } catch { /* Storage is optional. */ }
 const shortFaDate = new Intl.DateTimeFormat('fa-IR', { day: 'numeric', month: 'short', timeZone: 'UTC' });
 const englishDate = new Intl.DateTimeFormat('en', { day: 'numeric', month: 'short', timeZone: 'UTC' });
 const weekday = new Intl.DateTimeFormat('en', { weekday: 'short', timeZone: 'UTC' });
 const fullWeekday = new Intl.DateTimeFormat('en', { weekday: 'long', timeZone: 'UTC' });
 const asDate = day => new Date(day + 'T12:00:00Z');
 const mealName = id => MEALS.find(meal => meal.id === id)?.name || id;
-const hour = Number(new Intl.DateTimeFormat('en', { hour: 'numeric', hourCycle: 'h23', timeZone: 'Asia/Tehran' }).format(new Date()));
-const currentMeal = isLive ? null : hour < 16 ? '1' : '3'; // Live serving windows are not assumed.
 const weekNodes = new Map();
 const ledger = new SignedBalanceLedger();
 const segmentNodes = new Map();
@@ -50,6 +48,7 @@ let ledgerView;
 let toastTimer;
 let lastMessage = '';
 let modalScrollY = 0;
+let paletteActiveId;
 
 function persist() {
   try {
@@ -75,6 +74,8 @@ function statusFor(id) {
 
 function renderPalette() {
   const focused = document.activeElement?.dataset.focusKey;
+  const palette = $('palette');
+  const scrollTop = palette.scrollTop;
   const tokens = model.selectedIds.map(id => {
     const restaurant = model.restaurants.get(id);
     const status = statusFor(id);
@@ -86,7 +87,9 @@ function renderPalette() {
     button.setAttribute('aria-pressed', String(id === model.activeId));
     button.setAttribute('aria-label', [restaurant.name, status.text || status.title].filter(Boolean).join(' · '));
     button.title = [restaurant.name, status.title].filter(Boolean).join('\n');
-    button.append(el('span', status.busy ? 'spinner' : 'color-dot'), el('span', 'pill-name', restaurant.shortName),
+    const name = el('span', 'pill-name', restaurant.name);
+    name.dir = 'auto';
+    button.append(el('span', status.busy ? 'spinner' : 'color-dot'), name,
       el('span', `pill-status${status.error ? ' error' : ''}`, status.text));
     button.addEventListener('click', () => controller.select(id));
     token.append(button);
@@ -104,16 +107,17 @@ function renderPalette() {
     token.append(remove);
     return token;
   });
-  $('palette').replaceChildren(...tokens);
-  if (window.matchMedia('(max-width: 720px)').matches) {
-    const palette = $('palette');
+  palette.replaceChildren(...tokens);
+  palette.scrollTop = scrollTop;
+  if (paletteActiveId !== model.activeId) {
     const selected = palette.querySelector('.place-token.active');
     if (selected) {
-      const left = selected.offsetLeft - palette.offsetLeft;
-      const right = left + selected.offsetWidth;
-      if (left < palette.scrollLeft) palette.scrollLeft = left;
-      else if (right > palette.scrollLeft + palette.clientWidth) palette.scrollLeft = right - palette.clientWidth;
+      const top = selected.offsetTop;
+      const bottom = top + selected.offsetHeight;
+      if (top < palette.scrollTop) palette.scrollTop = top;
+      else if (bottom > palette.scrollTop + palette.clientHeight) palette.scrollTop = bottom - palette.clientHeight;
     }
+    paletteActiveId = model.activeId;
   }
   if (focused) document.querySelector(`[data-focus-key="${focused}"]`)?.focus({ preventScroll: true });
   const active = model.restaurants.get(model.activeId);
@@ -190,22 +194,18 @@ function renderTicks() {
 }
 
 function createWeek(week) {
+  try { localStorage.setItem(calendarStorageKey, week); } catch { /* Storage is optional. */ }
   const section = el('section', 'week');
   section.dataset.week = week;
   section.setAttribute('aria-label', `Week of ${englishDate.format(asDate(week))}`);
-  const heading = el('div', 'week-heading');
-  const left = el('div');
-  const title = el('h2', '', faDate.formatRange(asDate(week), asDate(addDays(week, 6))));
-  title.dir = 'auto';
-  title.style.display = 'inline';
-  left.append(title, el('span', 'week-relative', week === currentWeek ? 'This week' : week === nextWeek ? 'Next week' : ''));
-  heading.append(left, el('span', 'week-gregorian', `${englishDate.format(asDate(week))} – ${englishDate.format(asDate(addDays(week, 6)))}`));
+  $('jump-current').setAttribute('aria-pressed', String(week === currentWeek));
   const scroll = el('div', 'week-scroll');
   const grid = el('div', 'week-grid');
   grid.append(el('div'));
   for (let day = 0; day < 7; day++) {
     const date = addDays(week, day);
     const header = el('div', `day-heading${date === today ? ' is-today' : ''}`);
+    if (date === today) header.setAttribute('aria-current', 'date');
     header.append(el('strong', '', weekday.format(asDate(date))), el('span', '', shortFaDate.format(asDate(date))));
     grid.append(header);
   }
@@ -214,7 +214,7 @@ function createWeek(week) {
     grid.append(el('div', 'meal-heading', meal.name));
     for (let day = 0; day < 7; day++) {
       const date = addDays(week, day);
-      const cell = el('article', `meal-slot${date === today && meal.id === currentMeal ? ' current-slot' : ''}`);
+      const cell = el('article', `meal-slot${date === today ? ' is-today' : ''}${date === today && meal.id === currentMeal ? ' current-slot' : ''}`);
       cell.dataset.slot = `${date}|${meal.id}`;
       cell.setAttribute('aria-label', `${fullWeekday.format(asDate(date))}, ${englishDate.format(asDate(date))}, ${meal.name}`);
       grid.append(cell);
@@ -222,7 +222,7 @@ function createWeek(week) {
     }
   }
   scroll.append(grid);
-  section.append(heading, scroll);
+  section.append(scroll);
   $('weeks').replaceChildren(section);
   const entry = { section, slots };
   weekNodes.clear();
@@ -242,7 +242,7 @@ function card(choice, removing = false) {
   node.style.setProperty('--restaurant-color', restaurant.color);
   node.dataset.choiceId = choice.id;
   node.dataset.focusKey = `reservation-${choice.id}`;
-  node.title = choice.locked ? choice.lockReason || restaurant.name : restaurant.name;
+  node.title = [choice.name, choice.locked ? choice.lockReason : ''].filter(Boolean).join('\n');
   node.setAttribute('aria-label', `${removable ? 'Remove ' : restorable ? 'Keep ' : ''}${choice.name} · ${restaurant.name}`);
   if (removable || restorable) {
     node.type = 'button';
@@ -251,7 +251,7 @@ function card(choice, removing = false) {
     hint.setAttribute('aria-hidden', 'true');
     node.append(hint);
   }
-  const food = el('span', 'food-name', choice.name);
+  const food = el('span', 'food-name', restaurant.name);
   food.dir = 'rtl';
   food.title = choice.name;
   const bottom = el('span', 'food-card-bottom');
@@ -310,7 +310,10 @@ function renderSlots() {
       surface.append(state);
     }
     cell.classList.toggle('has-conflict', conflictSlots.has(key));
-    cell.replaceChildren(cards);
+    const isCurrent = date === today && mealId === currentMeal;
+    cell.classList.toggle('current-slot', isCurrent);
+    cell.setAttribute('aria-label', `${fullWeekday.format(asDate(date))}, ${englishDate.format(asDate(date))}, ${mealName(mealId)}${isCurrent ? ', current meal' : ''}`);
+    cell.replaceChildren(...(isCurrent ? [el('span', 'slot-now', 'Now · ' + mealName(mealId))] : []), cards);
     if (!hasActiveBooking) cell.append(surface);
     if (conflictSlots.has(key)) cell.append(el('p', 'slot-conflict', 'Meal entitlement conflict'));
   }
@@ -320,25 +323,6 @@ function renderSlots() {
     const nodes = new Map([...$('weeks').querySelectorAll('[data-focus-key]')].map(node => [node.dataset.focusKey, node]));
     (nodes.get(focusKey) || nodes.get(focusKey.replace('reservation-', 'ghost-')))?.focus({ preventScroll: true });
   }
-}
-
-function renderToday() {
-  $('today-strip').hidden = activeWeek !== currentWeek;
-  if (activeWeek !== currentWeek) return;
-  $('today-label').textContent = `Today · ${weekday.format(asDate(today))}`;
-  const bookings = model.bookings().filter(choice => choice.date === today && model.confirmed.has(choice.id));
-  const nodes = bookings.map(choice => {
-    const restaurant = model.restaurants.get(choice.restaurantId);
-    const node = el('span', 'today-booking');
-    node.style.setProperty('--restaurant-color', restaurant.color);
-    node.append(el('span', 'color-dot'), el('span', '', `${mealName(choice.mealId)} · ${restaurant.shortName} · ${choice.name}`));
-    return node;
-  });
-  const loads = model.selectedIds.map(id => model.loads.get(menuKey(id, currentWeek)));
-  if (!nodes.length) nodes.push(el('span', '', loads.some(load => !load || ['queued', 'loading'].includes(load.state))
-    ? 'Checking today’s reservations…' : loads.some(load => load.state === 'error') ? 'Some places could not be checked.'
-      : 'No reservations found in your checked places.'));
-  $('today-reservations').replaceChildren(...nodes);
 }
 
 function render() {
@@ -354,7 +338,6 @@ function render() {
   renderPalette();
   renderBalance();
   renderSlots();
-  renderToday();
   const issue = model.issueFor(model.activeId);
   $('planner-warning').hidden = !issue;
   $('planner-warning').textContent = issue || '';
@@ -454,6 +437,18 @@ function initializeCalendar(preferences = {}) {
   controller.showWeek(activeWeek);
   new ResizeObserver(renderTicks).observe($('app-shell'));
 }
+
+function refreshCalendarClock() {
+  const clock = calendarClock();
+  if (clock.today === today && clock.currentMeal === currentMeal) return;
+  const dayChanged = clock.today !== today;
+  ({ today, currentWeek, nextWeek, currentMeal } = clock);
+  if (!model) return;
+  if (dayChanged) createWeek(activeWeek);
+  render();
+}
+setInterval(refreshCalendarClock, 60_000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) refreshCalendarClock(); });
 
 async function connectDining() {
   if (connecting) return;

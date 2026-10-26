@@ -28,8 +28,9 @@ planner stops its reads; uninstalling removes Loghmeh's local preferences.
 
 ## Local data
 
-The selected restaurant palette stays in the extension's local browser
-storage. Live menus, balances, account information, and unsubmitted choices
+The selected restaurant palette and last viewed calendar week stay in the
+extension's local browser storage. Live and sample mode remember their weeks
+separately. Live menus, balances, account information, and unsubmitted choices
 are kept in memory, not saved to local storage. Unsubmitted choices are lost
 when the planner tab is closed.
 

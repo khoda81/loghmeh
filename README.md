@@ -18,7 +18,8 @@ Independent, unofficial extension for Firefox / Zen 142+ and Chrome / Chromium 1
 4. Open **Loghmeh** from the browser toolbar. It connects using that browser's
    dining login. If signed out, use **Open dining login**, sign in normally,
    then **Reconnect dining**.
-5. Add your usual restaurants from the nested picker. Food options stay visible;
+5. Add your usual restaurants from the nested picker. The scrollable restaurant
+   list shows full names, wrapping long ones. Food options stay visible;
    click one to select it. Hovering an existing reservation shows ×; clicking the
    card stages its removal; clicking it again keeps the reservation. Keyboard
    focus provides the same actions.
@@ -52,7 +53,10 @@ only; a real signed-in session has not yet been checked in Chrome.
 ## What it does
 
 - View one Saturday-first week, with previous/next controls, Jalali and
-  Gregorian dates, and today in Asia/Tehran. Only that week is requested for
+  Gregorian dates, and today's column highlighted in Asia/Tehran. The current
+  meal gets a stronger border and a Now label (lunch before 16:00, dinner after;
+  this is a clock cue, not a serving-window guarantee). Your last viewed week
+  is remembered locally, separately for live and sample mode. Only that week is requested for
   selected restaurants; menus arrive incrementally beside their loading pills.
   Returning to a loaded week reuses its snapshot in the open tab. The calendar
   fills the viewport; each meal cell scrolls independently and keeps its height
@@ -75,7 +79,7 @@ Extras, diet controls, multiple portions, and multiple-wallet spending need
 further support; unsupported changes stay disabled. Use one dining interface
 at a time because the university API shares a week cursor.
 
-Live restaurant preferences stay local. Real menu snapshots, balances, account
+Live restaurant preferences and the viewed week stay local. Real menu snapshots, balances, account
 identifiers, and drafts are not persisted. Keep the planner tab open to retain
 pending choices; it warns before closing with a draft. The **Report** button
 provides diagnostics without passwords, cookies, balances, food names, or
@@ -104,7 +108,7 @@ viewport and each cell scrolls independently. Slots with no foods stay blank.
 The cross-restaurant cancellation flow was checked in the browser's HTTP fixture
 and a dedicated controller test. [Calendar verification notes](docs/verification/ui-0.6.0.md).
 
-There are 59 passing Bun tests and 20 passing browser parser checks. The
+There are 62 passing Bun tests and 20 passing browser parser checks. The
 write serializer and reconciliation logic are tested with fictional HTTP
 responses; one live change is verified. General refund behavior and batch
 atomicity remain unverified. See
