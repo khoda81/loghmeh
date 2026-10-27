@@ -1,6 +1,7 @@
 // Runs the user-requested Claude motion study independently of the chat/terminal.
 import path from 'node:path';
 import { mkdir } from 'node:fs/promises';
+import { recoverClaudeHtml } from './output.ts';
 
 const root = path.resolve(import.meta.dir, '../../..');
 const directory = path.join(root, 'outputs/motion');
@@ -25,26 +26,29 @@ const child = Bun.spawn(['claude', '-p', '--safe-mode', '--model', status.model,
 });
 const log = Bun.file(logPath).writer();
 const decoder = new TextDecoder();
-let buffered = '', result = '', assistantText = '', lastSave = 0, failed = false;
+let buffered = '', lastSave = 0, failed = false;
+const events: Parameters<typeof recoverClaudeHtml>[0] = [];
+function consume(line: string) {
+  if (!line.trim()) return;
+  const event = JSON.parse(line);
+  status.events++;
+  status.updatedAt = new Date().toISOString();
+  if (typeof event.estimated_tokens === 'number') status.estimatedThinkingTokens = event.estimated_tokens;
+  if (event.type === 'assistant' || event.type === 'result') events.push(event);
+  if (event.type === 'result') failed = Boolean(event.is_error);
+}
 try {
   for await (const chunk of child.stdout) {
     log.write(chunk);
     buffered += decoder.decode(chunk, { stream: true });
     const lines = buffered.split('\n');
     buffered = lines.pop()!;
-    for (const line of lines) {
-      if (!line.trim()) continue;
-      const event = JSON.parse(line);
-      status.events++;
-      status.updatedAt = new Date().toISOString();
-      if (typeof event.estimated_tokens === 'number') status.estimatedThinkingTokens = event.estimated_tokens;
-      if (event.type === 'assistant') assistantText += (event.message?.content ?? []).filter((part: { type: string }) => part.type === 'text').map((part: { text: string }) => part.text).join('\n');
-      if (event.type === 'result') { result = event.result ?? ''; failed = Boolean(event.is_error); }
-    }
+    for (const line of lines) consume(line);
     if (Date.now() - lastSave > 5000) { await saveStatus(); lastSave = Date.now(); }
   }
+  consume(buffered + decoder.decode());
   const code = await child.exited;
-  const html = (result || assistantText).match(/<!doctype html[\s\S]*<\/html>/iu)?.[0];
+  const html = recoverClaudeHtml(events);
   if (code !== 0 || failed || !html) throw new Error(`Claude exited with code ${code}; no complete HTML gallery was returned. See ${logPath}`);
   await Bun.write(outputPath, html + '\n');
   await Bun.write(path.join(directory, 'gallery.html'), html + '\n');
