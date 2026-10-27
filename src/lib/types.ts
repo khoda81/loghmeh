@@ -79,6 +79,7 @@ export interface PlannerService {
   writeReason?: string;
   readMenu(restaurantId: string, week: string): Promise<Menu>;
   save(restaurantId: string, week: string, changes: CapturedChange[]): Promise<SaveResult>;
+  reconcile?(restaurantId: string, week: string, changes: CapturedChange[]): Promise<SaveResult>;
 }
 
 export interface Diagnostic {

@@ -42,8 +42,17 @@ export class LiveDiningService implements PlannerService {
     this.checks.push(check);
     if (this.checks.length > 80) this.checks.shift();
     try {
-      const result = await this.api.runtime.sendMessage({ type: 'loghmeh:planner', operation, parameters });
-      if (!result) throw new ProbeError('extension-error', 'Reload Loghmeh in about:debugging, then reconnect.');
+      let result;
+      try { result = await this.api.runtime.sendMessage({ type: 'loghmeh:planner', operation, parameters }); }
+      catch {
+        // A missing reply does not establish whether the background already wrote.
+        throw new ProbeError(operation === 'save' ? 'save-unknown' : 'background-unavailable', operation === 'save'
+          ? 'Dining may have saved these changes, but the extension lost the reply. Check save status before submitting again.'
+          : 'The planner could not reach the extension background. Reconnect dining; if it still fails, reload the extension and open a new planner tab.');
+      }
+      if (!result) throw new ProbeError(operation === 'save' ? 'save-unknown' : 'background-unavailable', operation === 'save'
+        ? 'Dining may have saved these changes, but no confirmation arrived. Check save status before submitting again.'
+        : 'The extension did not reply. Reconnect dining; if it still fails, reload the extension and open a new planner tab.');
       if (!result.ok && result.error.code === 'reconnect-required' && !recovered
           && this.token && ['menu', 'save'].includes(operation)) {
         // This error comes only from the background context lookup, before HTTP.
@@ -68,7 +77,7 @@ export class LiveDiningService implements PlannerService {
         if (['bootstrap', 'restaurants', 'menu', 'current', 'next', 'previous', 'submit'].includes(requestOperation ?? '')) check.requestOperation = requestOperation;
         if (method === 'GET' || method === 'POST') check.method = method;
         if (typeof status === 'number' && Number.isInteger(status) && status >= 0 && status <= 599) check.status = status;
-        if (['login-required', 'redirect-required', 'reconnect-required', 'account-changed'].includes(error.code)) {
+        if (['login-required', 'redirect-required', 'reconnect-required', 'account-changed', 'background-unavailable'].includes(error.code)) {
           this.sessionVerified = false;
           this.writable = false;
           this.writeReason = error.message;
@@ -118,9 +127,36 @@ export class LiveDiningService implements PlannerService {
 
   readMenu(restaurantId: string, week: string) { return this.request('menu', { token: this.token, restaurantId, week }); }
 
-  save(restaurantId: string, week: string, changes: CapturedChange[]) {
-    return this.request('save', { token: this.token, restaurantId, week,
-      changes: changes.map(({ choice, desired, expectedReserved, expectedPriceRials, expectedPreviousCount }) => ({ id: choice.id, desired,
-        expectedReserved, expectedPriceRials, expectedPreviousCount })) });
+  async save(restaurantId: string, week: string, changes: CapturedChange[]) {
+    try {
+      return await this.request('save', { token: this.token, restaurantId, week,
+        changes: changes.map(({ choice, desired, expectedReserved, expectedPriceRials, expectedPreviousCount }) => ({ id: choice.id, desired,
+          expectedReserved, expectedPriceRials, expectedPreviousCount })) });
+    } catch (error) {
+      if (!(error instanceof ProbeError) || error.code !== 'save-unknown') throw error;
+      // One read-only recovery attempt. Never resend a write whose reply was lost.
+      return this.reconcile(restaurantId, week, changes);
+    }
+  }
+
+  async reconcile(restaurantId: string, week: string, changes: CapturedChange[]): Promise<LiveSaveResult> {
+    try {
+      await this.recoverContext(restaurantId); // Verify the same account before adopting any state.
+      const menu = await this.readMenu(restaurantId, week);
+      if (menu.restaurantId !== restaurantId || menu.week !== week || !Number.isSafeInteger(menu.balanceRials) || menu.balanceRials! < 0
+          || changes.some(change => !menu.choices.some(choice => choice.id === change.choice.id))) {
+        throw new ProbeError('unexpected-response', 'Dining did not return the complete requested menu and balance.');
+      }
+      const appliedIds = changes.filter(change => menu.reservedIds.includes(change.choice.id) === change.desired).map(change => change.choice.id);
+      const complete = appliedIds.length === changes.length;
+      // Report reconciliation separately: a successful read is not evidence of another POST.
+      this.checks.push({ operation: 'reconcile', result: complete ? 'verified' : 'not-applied', appliedCount: appliedIds.length });
+      return { menu, balanceRials: menu.balanceRials!, appliedIds, attempted: false, complete,
+        message: complete ? 'Saved reservations verified with dining. Nothing was resubmitted.'
+          : 'Not all requested changes appear in dining’s current reservations. Nothing was resubmitted.' };
+    } catch (error) {
+      const reason = error instanceof ProbeError ? error.message : 'The extension could not read back the reservations.';
+      throw new ProbeError('save-unknown', `Dining may have saved these changes, but their status could not be verified. ${reason}`);
+    }
   }
 }

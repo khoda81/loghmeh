@@ -341,3 +341,61 @@ test('failed background recovery cannot retain a prior verified session or permi
   assert.equal(service.writable, false);
   assert.equal(typeof service.sessionCheckedAt, 'number');
 });
+
+function clientWithLostReply(context: ReturnType<typeof fakeDining>, { commit = true, loseContext = false } = {}) {
+  let saves = 0;
+  const service = new LiveDiningService({ runtime: { async sendMessage(message) {
+    const p = message.parameters;
+    if (message.operation === 'connect') return { ok: true, value: await context.session.connect() };
+    if (message.operation === 'menu') return { ok: true, value: await context.session.readMenu(p.token, p.restaurantId, p.week) };
+    saves++;
+    if (commit) await context.session.save(p.token, p.restaurantId, p.week, p.changes);
+    if (loseContext) context.session.contexts.clear();
+    throw new Error('Could not establish connection. Receiving end does not exist.');
+  } } });
+  return { service, saves: () => saves };
+}
+
+test('a lost extension reply after a server commit is verified without another save or charge', async () => {
+  const context = fakeDining();
+  const client = clientWithLostReply(context, { loseContext: true });
+  await client.service.connect();
+  const menu = await client.service.readMenu('10:20', next);
+  const food = menu.choices[0];
+  const result = await client.service.save('10:20', next, [{ choice: food, desired: true, revision: 1, ...intent(food, true) }]);
+  assert.equal(result.complete, true);
+  assert.deepEqual(result.appliedIds, [food.id]);
+  assert.equal(result.balanceRials, 1750000);
+  assert.equal(client.saves(), 1);
+  assert.equal(context.state.calls.filter(call => call.operation === 'submit').length, 1);
+});
+
+test('a lost extension reply reads current unapplied records without resending them', async () => {
+  const context = fakeDining();
+  const client = clientWithLostReply(context, { commit: false });
+  await client.service.connect();
+  const menu = await client.service.readMenu('10:20', next);
+  const food = menu.choices[0];
+  const changes = [{ choice: food, desired: true, revision: 1, ...intent(food, true) }];
+  const result = await client.service.save('10:20', next, changes);
+  assert.equal(result.complete, false);
+  assert.deepEqual(result.appliedIds, []);
+  await client.service.reconcile('10:20', next, changes);
+  assert.equal(client.saves(), 1);
+  assert.equal(context.state.calls.filter(call => call.operation === 'submit').length, 0);
+});
+
+test('unavailable background and changed accounts cannot turn an unknown write into a confirmed save', async () => {
+  for (const changedAccount of [false, true]) {
+    const context = fakeDining();
+    const client = clientWithLostReply(context);
+    await client.service.connect();
+    const menu = await client.service.readMenu('10:20', next);
+    const food = menu.choices[0];
+    if (changedAccount) context.state.identity = 'different-account';
+    else context.state.pause = operation => { if (operation === 'bootstrap') throw new Error('background unavailable'); };
+    await assert.rejects(client.service.save('10:20', next, [{ choice: food, desired: true, revision: 1, ...intent(food, true) }]), { code: 'save-unknown' });
+    assert.equal(client.saves(), 1);
+    assert.equal(client.service.writable, false);
+  }
+});
