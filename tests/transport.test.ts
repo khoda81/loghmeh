@@ -26,11 +26,23 @@ test('authenticated reads use browser credentials and do not follow SSO redirect
   assert.deepEqual(Object.fromEntries(new URLSearchParams(observed[0].init.body)), { personGroupId: '10', restId: '20', isKiosk: 'false' });
 });
 
-test('logged-out redirects are recognized without reading the login page', async () => {
+test('opaque redirects require browser navigation without claiming the user is signed out', async () => {
   let bodyRead = false;
   const client = createReadTransport(async () => fake({ status: 0, type: 'opaqueredirect', text() { bodyRead = true; } }));
-  await assert.rejects(client.read('bootstrap'), { code: 'login-required' });
+  await assert.rejects(client.read('bootstrap'), { code: 'redirect-required' });
   assert.equal(bodyRead, false);
+});
+
+test('HTTP redirects, authentication rejection, and unreadable responses stay distinct', async () => {
+  for (const [status, code] of [[302, 'redirect-required'], [401, 'login-required'], [0, 'network-error']] as const) {
+    const client = createReadTransport(async () => fake({ status, type: 'basic' }));
+    await assert.rejects(client.read('bootstrap'), (error: ProbeError) => {
+      assert.equal(error.code, code);
+      assert.equal(error.diagnostic.status, status);
+      assert.equal(error.diagnostic.path, '/Reserves');
+      return true;
+    });
+  }
 });
 
 test('server errors are not retried or mistaken for authentication', async () => {

@@ -16,7 +16,7 @@
   import type { Restaurant } from '../lib/types.ts';
 
   const api = globalThis.browser ?? globalThis.chrome;
-  const EXPIRED = ['login-required', 'reconnect-required', 'account-changed'];
+  const EXPIRED = ['login-required', 'redirect-required', 'reconnect-required', 'account-changed'];
   const extensionApi = api?.runtime?.id ? api : undefined;
   const isLive = Boolean(extensionApi) && new URLSearchParams(location.search).get('demo') !== '1';
   const sessionClient = extensionApi ? createExtensionClient(extensionApi) : null;

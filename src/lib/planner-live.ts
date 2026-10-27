@@ -26,6 +26,8 @@ export class LiveDiningService implements PlannerService {
   fixture?: boolean;
   checks: Check[] = [];
   recovery: Promise<void> | null = null;
+  sessionVerified = false;
+  sessionCheckedAt: number | null = null;
 
   constructor(api: RuntimeApi<'sendMessage' | 'getManifest'>) {
     this.api = api;
@@ -50,7 +52,7 @@ export class LiveDiningService implements PlannerService {
         check.result = 'reconnected';
         return await this.request(operation as 'menu', { ...parameters, token: this.token }, true);
       }
-      if (!result.ok) throw new ProbeError(result.error.code, result.error.message);
+      if (!result.ok) throw new ProbeError(result.error.code, result.error.message, result.error.diagnostic);
       check.result = 'passed';
       if (operation === 'connect') Object.assign(check, { restaurantCount: result.value.restaurants.length, writable: result.value.writable });
       if (operation === 'menu') Object.assign(check, { week: result.value.week, foodCount: result.value.choices.length,
@@ -59,14 +61,32 @@ export class LiveDiningService implements PlannerService {
       return result.value;
     } catch (error) {
       check.result = error instanceof ProbeError ? error.code : 'extension-error';
+      if (error instanceof ProbeError) {
+        const { operation: requestOperation, path, method, status } = error.diagnostic;
+        // Report only fixed endpoint names and HTTP metadata, never redirect URLs or response bodies.
+        if (typeof path === 'string' && /^\/Reserves(?:\/(?:GetRestaurantByPersonGroup|GetReservePage|GetCurrentReservePage|GetNextReservePage|GetPreReservePage|Index))?$/u.test(path)) check.path = path;
+        if (['bootstrap', 'restaurants', 'menu', 'current', 'next', 'previous', 'submit'].includes(requestOperation ?? '')) check.requestOperation = requestOperation;
+        if (method === 'GET' || method === 'POST') check.method = method;
+        if (typeof status === 'number' && Number.isInteger(status) && status >= 0 && status <= 599) check.status = status;
+        if (['login-required', 'redirect-required', 'reconnect-required', 'account-changed'].includes(error.code)) {
+          this.sessionVerified = false;
+          this.writable = false;
+          this.writeReason = error.message;
+        }
+      }
       throw error;
     } finally { check.elapsedMs = Math.round(performance.now() - started); }
   }
 
   async connect() {
-    const result = await this.request('connect');
-    Object.assign(this, result);
-    return result;
+    this.sessionVerified = false;
+    this.writable = false;
+    try {
+      const result = await this.request('connect');
+      Object.assign(this, result);
+      this.sessionVerified = true;
+      return result;
+    } finally { this.sessionCheckedAt = Date.now(); }
   }
 
   async recoverContext(restaurantId: string) {
@@ -78,6 +98,8 @@ export class LiveDiningService implements PlannerService {
           throw new ProbeError('account-changed', 'The signed-in account changed. Open a new Loghmeh tab; your old drafts stay here.');
         }
         Object.assign(this, connection);
+        this.sessionVerified = true;
+        this.sessionCheckedAt = Date.now();
       })().finally(() => { this.recovery = null; });
     }
     await this.recovery;
@@ -88,7 +110,8 @@ export class LiveDiningService implements PlannerService {
 
   connectionReport() {
     return { app: 'Loghmeh', version: this.api.runtime.getManifest?.().version || 'test', environment: this.fixture ? 'fixture' : 'extension',
-      sessionVerified: !this.fixture && Boolean(this.token), menuVerified: !this.fixture && this.checks.some(check => check.operation === 'menu' && check.result === 'passed'),
+      sessionVerified: !this.fixture && this.sessionVerified, sessionCheckedAt: this.sessionCheckedAt,
+      menuVerified: !this.fixture && this.checks.some(check => check.operation === 'menu' && check.result === 'passed'),
       writeVerified: !this.fixture && this.checks.some(check => check.operation === 'save' && check.attempted && check.result === 'verified'), checks: this.checks };
   }
 

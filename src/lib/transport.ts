@@ -110,9 +110,14 @@ function createTransport(builder: typeof buildDiningRequest, fetcher: Fetcher, {
     try {
       const response = await fetcher(url, { ...init, signal: controller.signal });
       diagnostic.status = response.status;
-      if (response.type === 'opaqueredirect' || response.status === 0 || response.status === 401
-          || (response.status >= 300 && response.status < 400) || response.redirected) {
-        throw new ProbeError('login-required', 'Sign in to dining in this browser, then check again.');
+      if (response.status === 401) {
+        throw new ProbeError('login-required', 'Dining requires sign-in. Open the dining website, then return here.');
+      }
+      if (response.type === 'opaqueredirect' || (response.status >= 300 && response.status < 400) || response.redirected) {
+        throw new ProbeError('redirect-required', 'Dining redirected the connection check. Open the dining website, then return here. You may already be signed in.');
+      }
+      if (response.status === 0) {
+        throw new ProbeError('network-error', 'The browser could not verify dining’s response. Check the university network and extension site access.');
       }
       if (!response.ok) {
         throw new ProbeError('server-error', `Dining returned HTTP ${response.status}. The request was not retried.`);

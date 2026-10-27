@@ -306,3 +306,25 @@ test('concurrent reads coalesce background recovery and both resume with the new
   await Promise.all([service.readMenu('10:20', next), service.readMenu('10:20', current)]);
   assert.equal(connections, 2);
 });
+
+test('a failed reconnect invalidates prior verification and reports only safe request metadata', async () => {
+  let calls = 0;
+  const service = new LiveDiningService({ runtime: { async sendMessage() {
+    if (++calls === 1) return { ok: true, value: { token: 'private-token', writable: true, restaurants: [] } };
+    return { ok: false, error: { code: 'redirect-required', message: 'Dining redirected the check.', diagnostic: {
+      operation: 'bootstrap', path: '/Reserves', method: 'GET', status: 0,
+      location: 'https://sso.example/?code=private-code', body: 'private-body', cookie: 'private-cookie',
+    } } };
+  } } });
+  await service.connect();
+  assert.equal(service.connectionReport().sessionVerified, true);
+  await assert.rejects(service.connect(), { code: 'redirect-required' });
+  const report = service.connectionReport();
+  assert.equal(report.sessionVerified, false);
+  assert.equal(service.writable, false);
+  assert.equal(typeof report.sessionCheckedAt, 'number');
+  assert.deepEqual(Object.fromEntries(Object.entries(report.checks.at(-1)!).filter(([key]) => key !== 'elapsedMs')), {
+    operation: 'connect', result: 'redirect-required', path: '/Reserves', requestOperation: 'bootstrap', method: 'GET', status: 0,
+  });
+  assert.equal(JSON.stringify(report).includes('private-'), false);
+});

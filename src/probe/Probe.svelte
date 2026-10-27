@@ -42,11 +42,11 @@
       error = safe.message;
       const failedOperation = safe.diagnostic?.operation || operation;
       record({ ...safe.diagnostic, operation: failedOperation }, { result: safe.code });
-      if (safe.code === 'login-required' || safe.code === 'permission-required') {
+      if (safe.code === 'login-required' || safe.code === 'redirect-required' || safe.code === 'permission-required') {
         connected = false;
         report.sessionVerified = false;
         report.menuVerified = false;
-        badge = { text: safe.code === 'login-required' ? 'Sign in needed' : 'Access needed', state: 'failed' };
+        badge = { text: safe.code === 'login-required' ? 'Sign in needed' : safe.code === 'redirect-required' ? 'Open dining to continue' : 'Access needed', state: 'failed' };
         if (safe.code === 'permission-required') permission = false;
       }
       if (failedOperation === 'bootstrap' && !connected) {
