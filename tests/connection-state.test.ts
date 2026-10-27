@@ -78,3 +78,20 @@ test('an old menu error cannot overwrite checking or waiting for the dining tab'
   connection.invalidate('login-required', 'An older menu failed.');
   expect(connection.state.phase).toBe('waiting');
 });
+
+test('connection errors report each attempt once and opening failures report a safe message', async () => {
+  const failures: { message: string; code?: string }[] = [];
+  const connection = new ConnectionController({
+    connect: async () => { throw new ProbeError('network-error', 'Cannot reach dining.'); },
+    openDining: async () => { throw new Error('private browser exception'); }, changed() {},
+    onError: failure => failures.push(failure),
+  });
+  const first = connection.check();
+  connection.check();
+  await first;
+  expect(failures).toEqual([{ code: 'network-error', message: 'Cannot reach dining.' }]);
+  await connection.check(true);
+  expect(failures).toHaveLength(2);
+  await connection.openDining();
+  expect(failures[2].message).toBe('The dining tab could not be opened. Try opening it again.');
+});

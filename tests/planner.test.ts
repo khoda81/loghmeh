@@ -7,10 +7,10 @@ import { PlannerController } from '../src/lib/planner-controller.ts';
 const today = '2026-10-22';
 const week = '2026-10-24';
 const tick = () => new Promise(resolve => setTimeout(resolve, 0));
-function setup({ service: serviceOptions = {}, selectedIds = ['kooy', 'garden'] } = {}) {
+function setup({ service: serviceOptions = {}, selectedIds = ['kooy', 'garden'], onError = (_failure: import('../src/lib/planner-controller.ts').PlannerFailure) => {} } = {}) {
   const service = new DemoDiningService({ today, wait: async () => {}, ...serviceOptions });
   const model = new PlannerModel({ restaurants: RESTAURANTS, balanceRials: service.balanceRials, selectedIds, activeId: selectedIds[0] });
-  const controller = new PlannerController({ model, service });
+  const controller = new PlannerController({ model, service, onError });
   return { model, service, controller };
 }
 async function load(context, targetWeek = week) {
@@ -301,4 +301,44 @@ test('local state restores restaurant colors, confirmed menus, and unsubmitted i
   assert.deepEqual(restored.selectedIds, context.model.selectedIds);
   assert.equal(restored.confirmed.size, context.model.confirmed.size);
   assert.equal(restored.loads.size, 0); // Cached menus still need a fresh read.
+});
+
+test('each failed menu attempt reports its full message once, including identical retries', async () => {
+  const failures = [];
+  const context = setup({ selectedIds: ['kooy'], onError: failure => failures.push(failure) });
+  context.service.failNextRead = true;
+  await load(context);
+  assert.equal(failures.length, 1);
+  assert.deepEqual(failures[0], { operation: 'load', restaurantId: 'kooy', week, code: undefined,
+    message: 'Could not load this menu. Try again.' });
+  context.controller.changed();
+  assert.equal(failures.length, 1);
+  context.service.failNextRead = true;
+  context.controller.retry('kooy');
+  await context.controller.idle();
+  assert.equal(failures.length, 2);
+  assert.equal(failures[1].message, failures[0].message);
+  assert.equal(context.model.loads.get(menuKey('kooy', week)).state, 'error');
+  context.controller.retry('kooy');
+  await context.controller.idle();
+  assert.equal(failures.length, 2);
+  assert.equal(context.model.loads.get(menuKey('kooy', week)).state, 'ready');
+});
+
+test('save failures report their message while retaining the draft and retry state', async () => {
+  const failures = [];
+  const context = setup({ selectedIds: ['kooy'], onError: failure => failures.push(failure) });
+  await load(context);
+  const food = choice(context);
+  context.controller.choose(food);
+  context.service.failNextSave = true;
+  await context.controller.submit();
+  assert.deepEqual(failures.map(({ operation, message }) => [operation, message]),
+    [['save', 'Demo server rejected this save. Your choices are kept.']]);
+  assert.equal(context.model.changes('kooy').length, 1);
+  assert.equal(context.model.saves.get('kooy').state, 'error');
+  context.controller.retry('kooy');
+  await context.controller.idle();
+  assert.equal(failures.length, 1);
+  assert.equal(context.model.changes('kooy').length, 0);
 });

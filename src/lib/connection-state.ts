@@ -29,6 +29,7 @@ export class ConnectionController {
     connect(interactive: boolean): Promise<{ writable: boolean; writeReason: string }>;
     openDining(): Promise<unknown>;
     changed(): void;
+    onError?(failure: { message: string; code?: string }): void;
   }) {}
 
   check(interactive = false): Promise<void> {
@@ -40,6 +41,7 @@ export class ConnectionController {
       this.state = { phase: result.writable ? 'connected' : 'read-only', message: result.writeReason, checkedAt: Date.now() };
     }, error => {
       this.state = { ...connectionFailure(error), checkedAt: Date.now() };
+      this.actions.onError?.({ message: this.state.message, code: this.state.code });
     }).finally(() => { this.pending = null; this.actions.changed(); });
     this.actions.changed();
     return this.pending;
@@ -55,6 +57,7 @@ export class ConnectionController {
     catch {
       this.awaitingReturn = false;
       this.state = { ...this.state, phase: 'error', message: 'The dining tab could not be opened. Try opening it again.' };
+      this.actions.onError?.({ message: this.state.message });
     } finally { this.opening = false; this.actions.changed(); }
   }
 

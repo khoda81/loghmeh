@@ -10,10 +10,19 @@ interface Task {
 }
 type QueuedTask = Task & { sequence: number; resolve(): void };
 
+export interface PlannerFailure {
+  operation: 'load' | 'save' | 'edit';
+  message: string;
+  code?: string;
+  restaurantId?: string;
+  week?: string;
+}
+
 export class PlannerController {
   model: PlannerModel;
   service: PlannerService;
   onChange: () => void;
+  onError: (failure: PlannerFailure) => void;
   queue: QueuedTask[] = [];
   running: QueuedTask | null = null;
   activeWeek: string | null = null;
@@ -22,10 +31,13 @@ export class PlannerController {
   message = '';
   sequence = 0;
 
-  constructor({ model, service, onChange = () => {} }: { model: PlannerModel; service: PlannerService; onChange?: () => void }) {
+  constructor({ model, service, onChange = () => {}, onError = () => {} }: {
+    model: PlannerModel; service: PlannerService; onChange?: () => void; onError?: (failure: PlannerFailure) => void;
+  }) {
     this.model = model;
     this.service = service;
     this.onChange = onChange;
+    this.onError = onError;
   }
 
   changed(message?: string) { if (message) this.message = message; this.onChange(); }
@@ -86,7 +98,9 @@ export class PlannerController {
         if (typeof menu.balanceRials === 'number' && Number.isSafeInteger(menu.balanceRials)) this.model.balanceRials = menu.balanceRials;
         this.model.loads.set(key, { restaurantId, week, state: 'ready' });
       } catch (error) {
-        this.model.loads.set(key, { restaurantId, week, state: 'error', ...errorDetails(error) });
+        const details = errorDetails(error);
+        this.model.loads.set(key, { restaurantId, week, state: 'error', ...details });
+        this.onError({ operation: 'load', restaurantId, week, ...details });
       }
       this.changed();
     } });
@@ -113,7 +127,8 @@ export class PlannerController {
   remove(restaurantId: string) {
     if (this.model.selectedIds.length === 1) return false;
     if (this.model.changes(restaurantId).length || this.saveJobs.has(restaurantId)) {
-      this.changed('Submit or undo this restaurant’s changes before removing it.');
+      this.onError({ operation: 'edit', restaurantId, message: 'Submit or undo this restaurant’s changes before hiding it.' });
+      this.changed();
       return false;
     }
     this.model.selectedIds = this.model.selectedIds.filter(id => id !== restaurantId);
@@ -125,13 +140,13 @@ export class PlannerController {
 
   choose(choice: Choice) {
     try { this.model.choose(choice); this.changed(); return true; }
-    catch (error) { this.changed(errorDetails(error).message); return false; }
+    catch (error) { this.onError({ operation: 'edit', restaurantId: choice.restaurantId, ...errorDetails(error) }); this.changed(); return false; }
   }
 
   removeChoice(choice: Choice) {
     if (!this.model.restaurants.has(choice.restaurantId)) return false;
     try { this.model.setDesired(choice, false); }
-    catch (error) { this.changed(errorDetails(error).message); return false; }
+    catch (error) { this.onError({ operation: 'edit', restaurantId: choice.restaurantId, ...errorDetails(error) }); this.changed(); return false; }
     // Removing a card is an edit, not a pill switch: keep other drafts pending.
     // Make this cancellation the Submit/Undo context without an implicit save.
     return this.add(choice.restaurantId, { submitPrevious: false });
@@ -139,7 +154,8 @@ export class PlannerController {
 
   submit(restaurantId = this.model.activeId): Promise<void> {
     if (this.service.mode === 'live' && !this.service.writable) {
-      this.changed(this.service.writeReason || 'Dining is connected in read-only mode.');
+      this.onError({ operation: 'save', restaurantId, message: this.service.writeReason || 'Dining is connected in read-only mode.' });
+      this.changed();
       return Promise.resolve();
     }
     if (this.saveJobs.has(restaurantId)) { this.saveAgain.add(restaurantId); return this.saveJobs.get(restaurantId)!; }
@@ -147,7 +163,8 @@ export class PlannerController {
     const issue = this.model.issueFor(restaurantId);
     if (issue) {
       this.model.saves.set(restaurantId, { state: 'error', message: issue });
-      this.changed(issue);
+      this.onError({ operation: 'save', restaurantId, message: issue });
+      this.changed();
       return Promise.resolve();
     }
     const changes = this.model.capture(restaurantId);
@@ -178,7 +195,8 @@ export class PlannerController {
           this.model.release(changes.filter(change => this.model.inflight.has(change.choice.id)));
           this.model.saves.set(restaurantId, { state: 'error', message, code });
           this.saveAgain.delete(restaurantId);
-          this.changed(`${message}${completed ? ` ${completed} earlier changes were saved.` : ''}`);
+          this.onError({ operation: 'save', restaurantId, week, code, message: `${message}${completed ? ` ${completed} earlier changes were saved.` : ''}` });
+          this.changed();
           return;
         }
       }
