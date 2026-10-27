@@ -51,7 +51,7 @@ test('the Bun preview refuses writes and paths outside its normalized file allow
   }
 });
 
-const entries = ['LICENSE', 'THIRD_PARTY_NOTICES.txt', 'manifest.json', 'background.js', 'icon.svg', 'planner.html', 'planner.js', 'planner.css', 'probe.html', 'probe.js', 'probe.css'];
+const entries = ['LICENSE', 'THIRD_PARTY_NOTICES.txt', 'manifest.json', 'background.js', 'icon.svg', 'planner.html', 'planner.js', 'planner.css'];
 const chromeOnly = ['offscreen.html', 'offscreen.js', 'icons/icon-16.png', 'icons/icon-32.png', 'icons/icon-48.png', 'icons/icon-128.png'];
 
 // Every page script, stylesheet, image, font, and module import must resolve inside the package.
@@ -103,12 +103,24 @@ test('both extension packages include the local variable font and its license, w
     expect(files['Estedad-VF.woff2']).toEqual(await Bun.file(path.join(root, 'src/fonts/Estedad-VF.woff2')).bytes());
     expect(decode(files['THIRD_PARTY_NOTICES.txt'])).toContain('SIL OPEN FONT LICENSE Version 1.1');
     expect(decode(files['THIRD_PARTY_NOTICES.txt'])).toContain('Copyright 2022 The Estedad Project Authors');
-    for (const page of ['planner', 'probe']) {
+    for (const page of ['planner']) {
       const css = decode(files[`${page}.css`]);
       expect(css).toContain('Estedad-VF.woff2');
       expect(css).toMatch(/font-weight:\s*100 900/u);
     }
     expectSelfContained(files);
+  }
+});
+
+test('release builds omit probe pages, sample menus, and simulation controls', async () => {
+  for (const target of ['firefox', 'chrome']) {
+    const { files } = await buildPackage(target);
+    expect(Object.keys(files).filter(name => /probe|demo|tests\//u.test(name))).toEqual([]);
+    const scripts = Object.entries(files).filter(([name]) => name.endsWith('.js')).map(([, bytes]) => decode(bytes)).join('\n');
+    for (const marker of ['DemoDiningService', 'چلو خورش قورمه سبزی', 'Sample menus', 'Interactive demo', 'A safe little sandbox.', 'probe.html', 'loghmeh:read']) {
+      expect(scripts).not.toContain(marker);
+    }
+    expect(decode(files['manifest.json'])).not.toContain('sample mode');
   }
 });
 

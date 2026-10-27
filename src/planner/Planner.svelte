@@ -8,7 +8,7 @@
   import PlacePicker from './PlacePicker.svelte';
   import Wallet from './Wallet.svelte';
   import WeekCalendar from './WeekCalendar.svelte';
-  import { createExtensionClient } from '../lib/client.ts';
+  import { createDiningAccessClient } from '../lib/client.ts';
   import { PlannerController } from '../lib/planner-controller.ts';
   import { DemoDiningService, RESTAURANTS, type DemoServerState } from '../lib/planner-demo.ts';
   import { LiveDiningService } from '../lib/planner-live.ts';
@@ -21,8 +21,8 @@
   const api = globalThis.browser ?? globalThis.chrome;
   const EXPIRED = ['login-required', 'redirect-required', 'reconnect-required', 'account-changed'];
   const extensionApi = api?.runtime?.id ? api : undefined;
-  const isLive = Boolean(extensionApi) && new URLSearchParams(location.search).get('demo') !== '1';
-  const sessionClient = extensionApi ? createExtensionClient(extensionApi) : null;
+  const isLive = !__LOGHMEH_PREVIEW__ || Boolean(extensionApi) && new URLSearchParams(location.search).get('demo') !== '1';
+  const sessionClient = extensionApi ? createDiningAccessClient(extensionApi) : null;
   const pageUrl = (page: string) => extensionApi?.runtime.getURL(page) ?? page;
 
   const startClock = calendarClock();
@@ -192,12 +192,14 @@
   <div class="topbar">
     <a class="brand" href={pageUrl('planner.html')}><img src={pageUrl('icon.svg')} width="30" height="30" alt=""><span>loghmeh <span lang="fa">لقمه</span></span></a>
     <div class="topbar-actions">
-      <a href={pageUrl('probe.html')} aria-label="Connection probe" title="Connection probe"><Activity size={18} aria-hidden="true" /></a>
+      {#if __LOGHMEH_PREVIEW__}
+        <a href={pageUrl('probe.html')} aria-label="Connection probe" title="Connection probe"><Activity size={18} aria-hidden="true" /></a>
+      {/if}
       {#if live}
-        <a href={pageUrl('planner.html?demo=1')} aria-label="Sample menus" title="Sample menus"><BookOpen size={18} aria-hidden="true" /></a>
+        {#if __LOGHMEH_PREVIEW__}<a href={pageUrl('planner.html?demo=1')} aria-label="Sample menus" title="Sample menus"><BookOpen size={18} aria-hidden="true" /></a>{/if}
         <button class="live-label" aria-label="Report" title="Connection report" onclick={openReport}><FileText size={18} aria-hidden="true" /></button>
         <button class="live-label" disabled={connecting} aria-label={liveLabel} title={liveLabel} onclick={connectDining}>{#if connecting}<Steam size={18} />{:else}<RefreshCw size={18} aria-hidden="true" />{/if}</button>
-      {:else}
+      {:else if __LOGHMEH_PREVIEW__}
         {#if extensionApi}<a href={pageUrl('planner.html')} aria-label="Connect dining" title="Connect dining"><Plug size={18} aria-hidden="true" /></a>{/if}
         <button class="demo-label" aria-label="Interactive demo" title="Interactive demo" onclick={() => simulation?.open()}><FlaskConical size={18} aria-hidden="true" /></button>
       {/if}
@@ -231,7 +233,7 @@
     <p class="dialog-intro">Request results only. No passwords, cookies, balances, food names, or account identifiers.</p>
     <textarea class="report-json" readonly aria-label="Connection report JSON" value={reportJson}></textarea>
   </Dialog>
-{:else if demo}
+{:else if __LOGHMEH_PREVIEW__ && demo}
   <Dialog bind:this={simulation} id="simulation" eyebrow="Try the awkward bits" title="A safe little sandbox." closeLabel="Close simulation controls">
     <p class="dialog-intro">All menus, money, and submissions here are fictional. Nothing is sent to the university.</p>
     <label class="simulation-option">Request speed<select onchange={event => { demo.delayMs = Number(event.currentTarget.value); }}>

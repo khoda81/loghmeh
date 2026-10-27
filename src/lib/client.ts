@@ -14,6 +14,15 @@ export interface ProbeClient {
   menu(personGroupId: string, restId: string): Promise<ReturnType<typeof parseMenu> & { diagnostic: Diagnostic }>;
 }
 
+// The production planner needs browser access and navigation, not the probe API.
+export function createDiningAccessClient(api: ExtensionApi) {
+  return {
+    hasPermission: () => api.permissions.contains({ origins: [HOST_PERMISSION] }),
+    requestPermission: () => api.permissions.request({ origins: [HOST_PERMISSION] }),
+    openLogin: () => api.tabs.create({ url: `${DINING_ORIGIN}/Reserves` }),
+  };
+}
+
 export function createExtensionClient(api: ExtensionApi): ProbeClient {
   function decode<T>(result: TransportResult, parser: (body: string) => T) {
     try { return parser(result.body); }
@@ -30,9 +39,7 @@ export function createExtensionClient(api: ExtensionApi): ProbeClient {
   }
   return {
     mode: 'extension',
-    hasPermission: () => api.permissions.contains({ origins: [HOST_PERMISSION] }),
-    requestPermission: () => api.permissions.request({ origins: [HOST_PERMISSION] }),
-    openLogin: () => api.tabs.create({ url: `${DINING_ORIGIN}/Reserves` }),
+    ...createDiningAccessClient(api),
     async bootstrap() {
       const result = await read('bootstrap');
       return { ...decode(result, parseBootstrap), diagnostic: result.diagnostic };

@@ -2,12 +2,15 @@ import { HOST_PERMISSION, ProbeError, publicError } from './transport.ts';
 import type { DiningSession } from './dining-session.ts';
 import type { ExtensionApi, MessageListener, RuntimeApi } from './types.ts';
 
+// Bun's source-level tests keep the diagnostic route; Vite folds it out of releases.
+const probeEnabled = typeof __LOGHMEH_PREVIEW__ === 'undefined' || __LOGHMEH_PREVIEW__;
+
 export function createMessageHandler(api: RuntimeApi<'id' | 'getURL'> & { permissions: Pick<ExtensionApi['permissions'], 'contains'> },
   session: Pick<DiningSession, 'probeRead' | 'connect' | 'readMenu' | 'save'>): MessageListener {
   return (message, sender, reply) => {
     if (sender.id !== api.runtime.id) return false;
     const page = sender.url?.split(/[?#]/u)[0];
-    const probe = page === api.runtime.getURL('probe.html') && message?.type === 'loghmeh:read';
+    const probe = probeEnabled && page === api.runtime.getURL('probe.html') && message?.type === 'loghmeh:read';
     const planner = page === api.runtime.getURL('planner.html') && message?.type === 'loghmeh:planner';
     if (!probe && !planner) return false;
     (async () => {

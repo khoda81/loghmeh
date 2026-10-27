@@ -5,7 +5,7 @@ import { svelte } from '@sveltejs/vite-plugin-svelte';
 
 const repository = import.meta.dirname;
 const at = (file: string) => path.join(repository, file);
-const entries = { planner: 'planner.html', probe: 'probe.html', offscreen: 'offscreen.html', background: 'background.ts' };
+const entries = { planner: 'planner.html', offscreen: 'offscreen.html', background: 'background.ts' };
 const testPages = ['browser', 'browser-live-planner', 'browser-mobile'];
 export const STATIC_FILES = ['manifest.json', 'THIRD_PARTY_NOTICES.txt', 'icon.svg', 'icons/icon-16.png', 'icons/icon-32.png', 'icons/icon-48.png', 'icons/icon-128.png'];
 
@@ -29,6 +29,7 @@ export default defineConfig(({ mode }) => {
   return {
     root: preview ? repository : at('src'),
     base: './',
+    define: { __LOGHMEH_PREVIEW__: JSON.stringify(preview) },
     // Build DOM with createElement rather than innerHTML templates, which the AMO linter flags.
     plugins: [svelte({ compilerOptions: { fragments: 'tree' } }), staticFiles(prefix)],
     build: {
@@ -43,7 +44,7 @@ export default defineConfig(({ mode }) => {
       rolldownOptions: {
         input: {
           ...Object.fromEntries(Object.entries(entries).map(([name, file]) => [prefix + name, at(`src/${file}`)])),
-          ...(preview ? Object.fromEntries(testPages.map(name => [`tests/${name}`, at(`tests/${name}.html`)])) : {}),
+          ...(preview ? { 'src/probe': at('src/probe.html'), ...Object.fromEntries(testPages.map(name => [`tests/${name}`, at(`tests/${name}.html`)])) } : {}),
         },
         output: {
           entryFileNames: '[name].js',

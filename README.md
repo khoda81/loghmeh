@@ -29,8 +29,8 @@ Independent, unofficial extension for Firefox / Zen 142+ and Chrome / Chromium 1
 pills submit the outgoing restaurant's pending changes.** Clicking a reservation
 stages its cancellation and activates that restaurant for Submit/Undo; other
 drafts stay pending. A note beside Submit says when a pill switch would save.
-The sample-menu link opens
-an isolated simulation if you want to explore the interactions first.
+The extension contains the live planner. Sample menus and the separate probe are
+available only in the local development preview.
 
 After updating source, run `bun run build` again (or keep `bun run build --watch`
 running), click **Reload** in `about:debugging`, then open a new Loghmeh tab. Temporary installation ends when removed or the browser restarts.
@@ -68,6 +68,9 @@ only; a real signed-in session has not yet been checked in Chrome.
   this is a clock cue, not a serving-window guarantee). Your last viewed week
   is remembered locally, separately for live and sample mode. Only that week is requested for
   selected restaurants; menus arrive incrementally beside their loading pills.
+  Loading and queued pills are disabled, with a larger steam indicator; calendar
+  cells stay blank until the menu arrives. The eye control hides a restaurant
+  from the calendar; it does not cancel its reservations.
   Returning to a loaded week reuses its snapshot in the open tab. The calendar
   has a fixed height; each meal cell scrolls independently. The page scrolls
   naturally with the budget pinned at the top and restaurant pills below the calendar.
@@ -149,9 +152,10 @@ bun run dev       # Vite dev server with hot reload, same URLs, no extension CSP
 
 Node and Python installations are not required.
 
-Open <http://localhost:4173/src/planner.html>. **Localhost always uses
-fictional data and cannot reuse your dining login.** The extension's explicit
-sample mode is `planner.html?demo=1` and keeps separate local sample state.
+Open <http://localhost:4173/src/planner.html>. **The local preview uses
+fictional data and cannot reuse your dining login.** Sample state stays local to
+the preview. Release builds exclude sample menus, simulation controls, and the
+probe page; adding `?demo=1` to the extension URL does not enable a sample mode.
 
 Useful local checks:
 
@@ -164,7 +168,8 @@ Useful local checks:
   Refresh after a successful initial connection. In these fixtures, Open dining
   simulates the visit locally; the next check succeeds without opening a real site.
 - `/tests/browser-mobile.html` — 390px responsive preview.
-- `/src/probe.html` — the separate read-only connection probe.
+- `/src/probe.html` — the separate read-only development probe. The shipped
+  planner's Report button provides connection diagnostics.
 
 `bun run package` builds `dist/loghmeh-0.7.0-firefox.zip` and
 `dist/loghmeh-0.7.0-chrome.zip`, plus unpacked `dist/firefox/` and `dist/chrome/`.
