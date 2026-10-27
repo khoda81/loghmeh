@@ -1,6 +1,5 @@
 <script lang="ts">
   import { ArrowLeft, ArrowRight, RefreshCw, Lock } from '@lucide/svelte';
-  import Steam from './Steam.svelte';
   import { WeekScrollGesture } from '../lib/calendar-navigation.ts';
   import FoodCard from './FoodCard.svelte';
   import type { PlannerController } from '../lib/planner-controller.ts';
@@ -148,8 +147,6 @@
                   </div>
                 {:else if slot.state === 'retry'}
                   <button class="slot-state" aria-label="Retry menu" title="Retry menu" onclick={() => controller.load(v.activeId, week, true)}><RefreshCw size={16} aria-hidden="true" /></button>
-                {:else if slot.state === 'loading'}
-                  <span class="slot-state" role="img" aria-label="Loading menu" title="Loading menu"><Steam size={18} /></span>
                 {:else if slot.state === 'closed'}
                   <span class="slot-state" role="img" aria-label="Reservation closed" title="Reservation closed"><Lock size={14} aria-hidden="true" /></span>
                 {/if}

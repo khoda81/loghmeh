@@ -65,7 +65,7 @@ test('a staged cancellation stays in its slot as a removing card', async () => {
 
 test('slots explain loading, failed, and closed menus; conflicts mark the slot', async () => {
   const { model, controller, service } = await loaded(['kooy', 'engineering']);
-  expect(slotView(model, '2026-10-25', '1', '2026-10-31').state).toBe('loading');
+  expect(slotView(model, '2026-10-25', '1', '2026-10-31').state).toBe(null);
   expect(slotView(model, '2026-10-30', '1', week).state).toBeNull(); // The sample Kooy has no Friday menu: nothing to say.
   controller.showWeek('2026-10-17');
   await controller.idle();

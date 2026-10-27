@@ -52,7 +52,7 @@ export interface SlotView {
   cards: { choice: Choice; removing: boolean }[];
   hasActiveBooking: boolean;
   ghosts: Choice[];
-  state: 'retry' | 'loading' | 'closed' | null;
+  state: 'retry' | 'closed' | null;
   conflict: boolean;
 }
 
@@ -66,7 +66,7 @@ export function slotView(model: PlannerModel, date: string, mealId: string, week
   const foods = menu?.choices.filter(choice => choice.date === date && choice.mealId === mealId) || [];
   const ghosts = foods.filter(choice => !choice.locked);
   const hasActiveBooking = bookings.some(choice => choice.restaurantId === model.activeId);
-  const state = hasActiveBooking || ghosts.length ? null : load?.state === 'error' ? 'retry' : !menu ? 'loading' : foods.length ? 'closed' : null;
+  const state = hasActiveBooking || ghosts.length ? null : load?.state === 'error' ? 'retry' : foods.length ? 'closed' : null;
   return {
     key,
     cards: [...bookings.map(choice => ({ choice, removing: false })), ...cancelling.map(draft => ({ choice: draft.choice, removing: true }))],

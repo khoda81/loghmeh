@@ -63,7 +63,11 @@ a:hover { text-decoration: underline; }
 .place-token { display: flex; flex: 0 1 auto; min-width: 0; max-width: 100%; align-items: stretch; border-radius: 22px; border: 1px solid #dce1d4; background: transparent; }
 .place-token.active { border-color: var(--restaurant-color); background: color-mix(in srgb, var(--restaurant-color) 9%, var(--paper)); box-shadow: 0 0 0 1px var(--restaurant-color); }
 .place-token.has-error { border-color: var(--danger); }
+.place-token.loading { background: #eeeee5; border-style: dashed; }
 .place-pill { display: flex; flex: 1; min-width: 0; gap: 8px; align-items: center; min-height: 36px; border: 0; background: transparent; padding: 6px 12px; border-radius: 22px; text-align: start; }
+.place-pill:disabled { opacity: 1; cursor: wait; }
+.place-pill:disabled .pill-name { opacity: .55; }
+.place-pill > .steam { color: var(--restaurant-color); }
 .color-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; background: var(--restaurant-color, var(--active-color)); }
 .pill-name { flex: 1; min-width: 0; font-size: 13px; font-weight: 650; white-space: normal; overflow-wrap: anywhere; }
 .pill-status:empty { display: none; }

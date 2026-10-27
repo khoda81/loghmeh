@@ -8,7 +8,7 @@ export function steamPath(time: number, strand: number) {
     return `${point ? 'L' : 'M'}${x.toFixed(2)},${(80 - q * 80).toFixed(2)}`;
   }).join(' ');
 }
-export const STEAM_DURATION = `${period}s`;
+export const STEAM_DURATION = `${period / 2}s`;
 export const STEAM_STRANDS = Array.from({ length: 3 }, (_, strand) => ({
   still: steamPath(0, strand),
   frames: Array.from({ length: 25 }, (_, frame) => steamPath(frame / 24 * period, strand)).join(';'),
