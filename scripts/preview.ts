@@ -3,7 +3,7 @@ import { buildExtension } from './package.ts';
 
 // Serves the preview build (bun run preview builds it first) with the extension's restrictions.
 const root = path.resolve(import.meta.dir, '../dist/preview');
-const types: Record<string, string> = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml' };
+const types: Record<string, string> = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml', '.woff2': 'font/woff2' };
 
 export function startPreview({ port = 4173 } = {}) {
   return Bun.serve({

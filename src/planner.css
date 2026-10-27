@@ -1,6 +1,8 @@
+@import "./fonts.css";
+
 :root { color-scheme: light; --ink: #263a2e; --muted: #758075; --paper: #f7f5ee; --surface: #fdfcf8; --green: #315b46; --line: #dfe3d9; --active-color: #47745c; --danger: #b54b40; --calendar-height: 520px; --page-gutter: 28px; }
 * { box-sizing: border-box; }
-body { margin: 0; min-height: 100dvh; color: var(--ink); background: var(--paper); font: 14px/1.5 system-ui, -apple-system, sans-serif; }
+body { margin: 0; min-height: 100dvh; color: var(--ink); background: var(--paper); font: 14px/1.5 var(--font-sans); }
 button, input, select { font: inherit; }
 button { cursor: pointer; color: inherit; }
 button:disabled { cursor: default; opacity: .55; }

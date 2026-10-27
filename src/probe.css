@@ -1,6 +1,8 @@
+@import "./fonts.css";
+
 :root { color-scheme: light; --ink: #263a2e; --muted: #667365; --paper: #f7f5ee; --green: #315b46; --line: #e1e5da; }
 * { box-sizing: border-box; }
-body { margin: 0; color: var(--ink); background: var(--paper); font: 15px/1.6 system-ui, sans-serif; }
+body { margin: 0; color: var(--ink); background: var(--paper); font: 15px/1.6 var(--font-sans); }
 main { max-width: 1000px; margin: auto; padding: 32px 28px 40px; }
 header, .brand, .section-heading, .actions { display: flex; align-items: center; }
 header { justify-content: space-between; gap: 16px; }

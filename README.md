@@ -164,6 +164,10 @@ Useful local checks:
 
 `bun run package` builds `dist/loghmeh-0.7.0-firefox.zip` and
 `dist/loghmeh-0.7.0-chrome.zip`, plus unpacked `dist/firefox/` and `dist/chrome/`.
+Estedad is bundled locally for Persian and Latin text, including its variable weights.
+Typography needs no public internet access; live dining only needs access to the
+university service. The font's OFL license is included in the third-party notices.
+
 Packages contain the unminified build, the MIT license, and bundled-library notices; Chrome gets a derived
 manifest. `dist/loghmeh-0.7.0-source.zip` holds the sources that addons.mozilla.org
 reviews alongside a bundled add-on. Releases are cut from version tags: see [releasing](docs/releasing.md). Captures, outputs, private checks,
