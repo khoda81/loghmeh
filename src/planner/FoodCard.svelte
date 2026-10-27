@@ -1,17 +1,18 @@
 <script lang="ts">
-  import { X, Undo2, Lock, CircleAlert, Pencil } from '@lucide/svelte';
+  import { X, Undo2, Lock, CircleAlert, CircleHelp, Pencil } from '@lucide/svelte';
   import Steam from './Steam.svelte';
   import { money } from '../lib/planner-view.ts';
   import type { Choice, Restaurant } from '../lib/types.ts';
 
-  let { choice, restaurant, removing, draft, saving, failed, ontoggle }: {
+  let { choice, restaurant, removing, draft, saving, failed, unverified = false, verifying = false, ontoggle }: {
     choice: Choice; restaurant: Restaurant; removing: boolean; draft: boolean; saving: boolean; failed: boolean; ontoggle: () => void;
+    unverified?: boolean; verifying?: boolean;
   } = $props();
   const removable = $derived(!choice.locked && !removing);
   // A staged cancellation stays clickable so a stray tap can be taken back in place.
   const restorable = $derived(removing && !saving);
-  const state = $derived(failed ? 'Not saved' : saving ? 'Saving…' : removing ? 'Cancel pending' : draft ? 'Draft' : choice.locked ? 'Locked' : '');
-  const StatusIcon = $derived(failed ? CircleAlert : removing ? Undo2 : draft ? Pencil : Lock);
+  const state = $derived(unverified ? 'Save status unverified' : failed ? 'Not saved' : saving ? verifying ? 'Checking save status…' : 'Saving…' : removing ? 'Cancel pending' : draft ? 'Draft' : choice.locked ? 'Locked' : '');
+  const StatusIcon = $derived(unverified ? CircleHelp : failed ? CircleAlert : removing ? Undo2 : draft ? Pencil : Lock);
   const statusTitle = $derived([state, choice.locked ? choice.lockReason : ''].filter(Boolean).join(' · '));
   const title = $derived([choice.name, statusTitle].filter(Boolean).join('\n'));
 </script>

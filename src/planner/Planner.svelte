@@ -20,7 +20,7 @@
   import type { Restaurant } from '../lib/types.ts';
 
   const api = globalThis.browser ?? globalThis.chrome;
-  const EXPIRED = ['login-required', 'redirect-required', 'reconnect-required', 'account-changed'];
+  const EXPIRED = ['login-required', 'redirect-required', 'reconnect-required', 'account-changed', 'background-unavailable'];
   const extensionApi = api?.runtime?.id ? api : undefined;
   const isLive = !__LOGHMEH_PREVIEW__ || Boolean(extensionApi) && new URLSearchParams(location.search).get('demo') !== '1';
   const sessionClient = extensionApi ? createDiningAccessClient(extensionApi) : null;
@@ -45,21 +45,22 @@
   let controller = $state.raw<PlannerController>();
   let revision = $state(0);
   let accountTag: string | null = null;
-  interface ErrorNotice { id: number; title: string; message: string; context?: string; week?: string; code?: string }
+  interface ErrorNotice { id: number; title: string; message: string; context?: string; week?: string; code?: string; restaurantId?: string }
   let errors = $state<ErrorNotice[]>([]);
   let errorSequence = 0;
 
-  function showError(title: string, failure: { message: string; code?: string }, context?: string, week?: string) {
-    errors = [...errors, { id: ++errorSequence, title, ...failure, context, week }];
+  function showError(title: string, failure: { message: string; code?: string }, context?: string, week?: string, restaurantId?: string) {
+    errors = [...errors, { id: ++errorSequence, title, ...failure, context, week, restaurantId }];
     // Public messages only: never log HTTP bodies, tokens, or the original exception.
     console.error(`[Loghmeh] ${title}: ${failure.message}`, { code: failure.code });
   }
 
   function plannerError(failure: PlannerFailure) {
-    const title = { load: 'Menu could not be loaded', save: 'Changes could not be fully saved', edit: 'Could not make that change' }[failure.operation];
+    const title = failure.code === 'save-unknown' ? 'Save outcome not verified'
+      : { load: 'Menu could not be loaded', save: 'Changes could not be fully saved', edit: 'Could not make that change' }[failure.operation];
     const restaurant = failure.restaurantId ? model?.restaurants.get(failure.restaurantId)?.name : undefined;
     const week = failure.week ? `Week of ${formatDay(failure.week, 'short')}` : undefined;
-    showError(title, { message: failure.message, code: failure.code }, restaurant, week);
+    showError(title, { message: failure.message, code: failure.code }, restaurant, week, failure.restaurantId);
   }
 
   const connectionController = new ConnectionController({
@@ -91,10 +92,14 @@
 
   function changed() {
     if (!model || !controller) return;
+    errors = errors.filter(error => error.code !== 'save-unknown' || !error.restaurantId || controller!.uncertainSaves.has(error.restaurantId));
     if (live) {
+      if (live.sessionVerified && ['save-unknown', 'background-unavailable'].includes(connectionController.state.code ?? '')) {
+        connectionController.verified(live);
+      }
       const failures = [...model.loads.values(), ...model.saves.values()];
       const expired = failures.find(state => EXPIRED.includes(state.code ?? ''))
-        ?? (!live.sessionVerified ? failures.find(state => state.state === 'error') : undefined);
+        ?? (!live.sessionVerified ? failures.find(state => state.state === 'error' || state.state === 'unknown') : undefined);
       if (expired) {
         live.writable = false;
         connectionController.invalidate(expired.code, expired.message ?? 'The dining session needs to be checked again.');

@@ -13,6 +13,9 @@ const delayMs = Math.max(120, Math.min(10000, Number(new URLSearchParams(locatio
 let hasAccess = connectionScenario !== 'permission';
 let diningVisited = false;
 let connectionAttempts = 0;
+const saveReplyScenario = new URLSearchParams(location.search).get('save-reply');
+let replyLost = false, recoveryUnavailable = false, writes = 0;
+document.body.dataset.fixtureWrites = '0';
 let cursor = current;
 let balance = 2000000;
 const reserved = new Set([`20|${addDays(current, 8)}|1|101`]);
@@ -48,6 +51,7 @@ const transport = { async request(operation: string, parameters: Record<string, 
   if(operation==='next') cursor=addDays(cursor,7);
   if(operation==='previous') cursor=addDays(cursor,-7);
   if(operation==='submit') {
+    document.body.dataset.fixtureWrites = String(++writes);
     if(!new URLSearchParams(location.search).has('reject')) for(const record of parameters.records) {
       const date=record.match(/dd(\d{4})_(\d{2})_(\d{2})ppp/), food=Number(record.match(/fo(\d+)ftf/)[1]);
       const key=`${parameters.restId}|${date[1]}-${date[2]}-${date[3]}|1|${food}`;
@@ -62,13 +66,25 @@ const api: ExtensionApi = { runtime:{id:'loghmeh-test-fixture', sendMessage:null
   permissions:{contains:async()=>hasAccess,request:async()=>hasAccess=true},tabs:{create:async()=>{ diningVisited=true; }} };
 const session = new DiningSession({transport:fake(transport)});
 const handler = createMessageHandler(api,session);
-api.runtime.sendMessage = message=>new Promise(resolve=>handler(message,{id:api.runtime.id,url:api.runtime.getURL('planner.html')},(result: any)=>{
+api.runtime.sendMessage = message=>{
+  if(message.operation==='connect' && recoveryUnavailable) {
+    recoveryUnavailable=false;
+    return Promise.reject(new Error('Could not establish connection. Receiving end does not exist.'));
+  }
+  return new Promise((resolve,reject)=>handler(message,{id:api.runtime.id,url:api.runtime.getURL('planner.html')},(result: any)=>{
   if(result.ok&&message.operation==='connect') {
     result.value.fixture=true;
     if(connectionScenario==='read-only') { result.value.writable=false; result.value.writeReason='This fixture simulates an account with multiple wallets. Reservations are read-only.'; }
   }
+  if(result.ok && message.operation==='save' && saveReplyScenario && !replyLost) {
+    replyLost=true;
+    recoveryUnavailable=saveReplyScenario==='unavailable';
+    reject(new Error('Could not establish connection. Receiving end does not exist.'));
+    return;
+  }
   resolve(result);
 }));
+};
 globalThis.browser=api;
 document.title='Loghmeh · live API contract fixture';
 await import('../src/planner.ts');

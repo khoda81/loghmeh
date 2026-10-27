@@ -59,7 +59,7 @@ export interface LoadState {
 }
 
 export interface SaveState {
-  state: 'queued' | 'saving' | 'saved' | 'error';
+  state: 'queued' | 'saving' | 'verifying' | 'unknown' | 'saved' | 'error';
   message?: string;
   code?: string;
 }

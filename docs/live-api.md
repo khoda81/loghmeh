@@ -70,6 +70,17 @@ stays in the draft. A retry preflights again, so already-applied changes are
 reconciled without repeating their purchase.
 
 If read-back also fails, the outcome is unknown and the draft stays intact.
+The planner also treats a rejected or empty extension message reply during a save
+as an unknown outcome: the background may already have committed it. It makes
+one read-only recovery attempt, verifies the original account, and reads the
+requested restaurant/week. A complete matching snapshot confirms the submitted
+intent without another reservation POST; partial matches retain only unapplied
+changes. If that recovery is unavailable, the attempted batch stays unverified,
+including any edits made during submission. Submit and the pill's retry control
+then check save status without writing. Later weeks stop, and a successful
+status check does not automatically submit newer or later drafts. A separate
+explicit submission is required for remaining changes after state is known.
+
 No transmitted write or cursor-advance operation is automatically retried.
 Version 0.4.1 can automatically recover a missing background context and resume
 a request only when the context lookup failed before any HTTP operation. It

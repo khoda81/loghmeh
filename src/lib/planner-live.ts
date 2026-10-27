@@ -92,6 +92,9 @@ export class LiveDiningService implements PlannerService {
     this.writable = false;
     try {
       const result = await this.request('connect');
+      if (this.accountTag != null && result.accountTag !== this.accountTag) {
+        throw new ProbeError('account-changed', 'The signed-in account changed. Open a new Loghmeh tab; your old drafts stay here.');
+      }
       Object.assign(this, result);
       this.sessionVerified = true;
       return result;

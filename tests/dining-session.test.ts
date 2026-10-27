@@ -342,18 +342,22 @@ test('failed background recovery cannot retain a prior verified session or permi
   assert.equal(typeof service.sessionCheckedAt, 'number');
 });
 
-function clientWithLostReply(context: ReturnType<typeof fakeDining>, { commit = true, loseContext = false } = {}) {
+function clientWithLostReply(context: ReturnType<typeof fakeDining>, { commit = true, loseContext = false, blockRecovery = false, emptyReply = false } = {}) {
   let saves = 0;
   const service = new LiveDiningService({ runtime: { async sendMessage(message) {
     const p = message.parameters;
-    if (message.operation === 'connect') return { ok: true, value: await context.session.connect() };
+    if (message.operation === 'connect') {
+      if (saves && blockRecovery) throw new Error('Background is unavailable');
+      return { ok: true, value: await context.session.connect() };
+    }
     if (message.operation === 'menu') return { ok: true, value: await context.session.readMenu(p.token, p.restaurantId, p.week) };
     saves++;
     if (commit) await context.session.save(p.token, p.restaurantId, p.week, p.changes);
     if (loseContext) context.session.contexts.clear();
+    if (emptyReply) return undefined;
     throw new Error('Could not establish connection. Receiving end does not exist.');
   } } });
-  return { service, saves: () => saves };
+  return { service, saves: () => saves, setRecoveryBlocked: (value: boolean) => { blockRecovery = value; } };
 }
 
 test('a lost extension reply after a server commit is verified without another save or charge', async () => {
@@ -398,4 +402,123 @@ test('unavailable background and changed accounts cannot turn an unknown write i
     assert.equal(client.saves(), 1);
     assert.equal(client.service.writable, false);
   }
+});
+
+async function plannerWithLostReply(options: Parameters<typeof clientWithLostReply>[1] = {}) {
+  const context = fakeDining();
+  const client = clientWithLostReply(context, options);
+  await client.service.connect();
+  const model = new PlannerModel({ restaurants: client.service.restaurants, balanceRials: client.service.balanceRials, selectedIds: ['10:20'] });
+  const failures = [];
+  const controller = new PlannerController({ model, service: client.service, onError: failure => failures.push(failure) });
+  controller.showWeek(next);
+  await controller.idle();
+  return { ...context, ...client, model, controller, failures, food: model.menus.get(`10:20|${next}`).choices[0] };
+}
+
+test('an empty reply after commit reconciles the planner instead of marking saved choices failed', async () => {
+  const p = await plannerWithLostReply({ emptyReply: true });
+  p.controller.choose(p.food);
+  await p.controller.submit();
+  assert.equal(p.model.saves.get('10:20').state, 'saved');
+  assert.equal(p.model.changes().length, 0);
+  assert.equal(p.model.balanceRials, 1750000);
+  assert.equal(p.failures.length, 0);
+  assert.equal(p.saves(), 1);
+});
+
+test('unknown saves keep their intents and Submit checks status even while writes are disabled', async () => {
+  const p = await plannerWithLostReply({ blockRecovery: true, loseContext: true });
+  p.controller.choose(p.food);
+  await p.controller.submit();
+  assert.equal(p.state.bookings.has(p.food.id), true); // Dining saved it despite the lost reply.
+  assert.equal(p.model.saves.get('10:20').state, 'unknown');
+  assert.equal(p.model.inflight.has(p.food.id), true);
+  assert.equal(p.model.discard('10:20'), false);
+  assert.equal(p.service.writable, false);
+  assert.equal(p.failures[0].code, 'save-unknown');
+  p.setRecoveryBlocked(false);
+  await p.controller.submit(); // This must only read, not resend.
+  await p.controller.idle();
+  assert.equal(p.saves(), 1);
+  assert.equal(p.model.saves.get('10:20').state, 'saved');
+  assert.equal(p.model.inflight.size, 0);
+  assert.equal(p.model.changes().length, 0);
+  assert.equal(p.model.balanceRials, 1750000);
+});
+
+test('reversing intent during an unknown save survives reconciliation and is never autosubmitted', async () => {
+  const p = await plannerWithLostReply({ blockRecovery: true });
+  let release!: () => void;
+  const gate = new Promise<void>(resolve => { release = resolve; });
+  p.state.pause = operation => operation === 'submit' ? gate : undefined;
+  p.controller.choose(p.food);
+  const saving = p.controller.submit();
+  while (!p.state.calls.some(call => call.operation === 'submit')) await new Promise(resolve => setTimeout(resolve, 0));
+  p.model.setDesired(p.food, false);
+  release();
+  await saving;
+  assert.equal(p.model.drafts.get(p.food.id).desired, false);
+  assert.equal(p.model.saves.get('10:20').state, 'unknown');
+  p.setRecoveryBlocked(false);
+  await p.controller.checkSave('10:20');
+  await p.controller.idle();
+  assert.equal(p.model.confirmed.has(p.food.id), true);
+  assert.equal(p.model.drafts.get(p.food.id).desired, false);
+  assert.equal(p.saves(), 1);
+  assert.equal(p.model.delta(), -250000);
+  await p.controller.submit(); // A separate explicit action sends the newer cancellation.
+  assert.equal(p.saves(), 2);
+  assert.equal(p.state.bookings.has(p.food.id), false);
+  assert.equal(p.model.changes().length, 0);
+  assert.equal(p.model.balanceRials, 2000000);
+});
+
+test('partial read-back commits accepted records and keeps only unapplied changes', async () => {
+  const p = await plannerWithLostReply();
+  const foods = p.model.menus.get(`10:20|${next}`).choices;
+  for (const food of foods) p.controller.choose(food);
+  p.state.rejectIds.add(foods[1].id);
+  await p.controller.submit();
+  assert.equal(p.saves(), 1);
+  assert.equal(p.model.confirmed.has(foods[0].id), true);
+  assert.deepEqual(p.model.changes().map(draft => draft.choice.id), [foods[1].id]);
+  assert.equal(p.model.inflight.size, 0);
+  assert.equal(p.model.saves.get('10:20').state, 'error');
+  assert.equal(p.model.balanceRials, 1750000);
+});
+
+test('an unknown batch stops later weeks, and checking it cannot submit those later drafts', async () => {
+  const p = await plannerWithLostReply({ blockRecovery: true });
+  p.controller.choose(p.food);
+  const later = addDays(next, 7);
+  p.controller.showWeek(later);
+  await p.controller.idle();
+  const food = p.model.menus.get(`10:20|${later}`).choices[0];
+  p.controller.choose(food);
+  await p.controller.submit();
+  assert.equal(p.saves(), 1);
+  assert.equal(p.model.inflight.has(food.id), false);
+  p.setRecoveryBlocked(false);
+  await p.controller.checkSave('10:20');
+  await p.controller.idle();
+  assert.equal(p.saves(), 1);
+  assert.deepEqual(p.model.changes().map(draft => draft.choice.id), [food.id]);
+  assert.equal(p.model.confirmed.has(p.food.id), true);
+});
+
+test('a manual reconnect to another account cannot retarget an unresolved save', async () => {
+  const p = await plannerWithLostReply({ blockRecovery: true });
+  const originalAccount = p.service.accountTag;
+  p.controller.choose(p.food);
+  await p.controller.submit();
+  p.setRecoveryBlocked(false);
+  p.state.identity = 'another-account';
+  await assert.rejects(p.service.connect(), { code: 'account-changed' });
+  assert.equal(p.service.accountTag, originalAccount);
+  await p.controller.checkSave('10:20');
+  assert.equal(p.model.saves.get('10:20').state, 'unknown');
+  assert.equal(p.model.confirmed.has(p.food.id), false);
+  assert.equal(p.model.changes().length, 1);
+  assert.equal(p.saves(), 1);
 });

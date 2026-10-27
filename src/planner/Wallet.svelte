@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Undo2, Save, Check, CircleMinus, Lock } from '@lucide/svelte';
+  import { Undo2, Save, Check, CircleMinus, Lock, RefreshCw } from '@lucide/svelte';
   import Steam from './Steam.svelte';
   import type { PlannerController } from '../lib/planner-controller.ts';
   import type { LiveDiningService } from '../lib/planner-live.ts';
@@ -20,6 +20,9 @@
     return {
       ledger: ledgerView,
       busy: controller.saveJobs.has(model.activeId),
+      unknown: controller.uncertainSaves.has(model.activeId),
+      verifying: model.saves.get(model.activeId)?.state === 'verifying',
+      unverifiedBalance: controller.uncertainSaves.size > 0,
       count,
       pending: model.changes().length,
       issue: model.issueFor(model.activeId),
@@ -32,6 +35,7 @@
   });
   const projected = $derived(v.ledger.projectedRials);
   const pendingLabel = $derived.by(() => {
+    if (v.unverifiedBalance) return 'Save status unverified';
     const { spendingRials, recoveryRials } = v.ledger;
     const parts = [spendingRials ? `${money(spendingRials)} spending` : '', recoveryRials ? `${money(recoveryRials)} recovery` : ''].filter(Boolean);
     return parts.length ? `${parts.join(' · ')} pending` : v.pending ? 'Change queued behind a saving meal' : 'No pending changes';
@@ -49,24 +53,25 @@
 
 <div class="wallet">
   <div class="wallet-top">
-    <div class="wallet-amount"><span class="eyebrow">Your balance</span><strong>{money(v.ledger.balanceRials)}</strong><span class="unit">toman</span></div>
+    <div class="wallet-amount" class:unverified={v.unverifiedBalance}><span class="eyebrow">{v.unverifiedBalance ? 'Last known balance' : 'Your balance'}</span><strong>{money(v.ledger.balanceRials)}</strong><span class="unit">toman</span></div>
     <div class="wallet-projection">
       <span>{pendingLabel}</span><span><span>{live && v.pending ? 'Estimated after saving' : 'After saving'}</span> <strong style:color={projected < 0 ? 'var(--danger)' : null}>{money(projected)}</strong></span>
     </div>
     <div class="wallet-actions">
       <!-- select() submits the outgoing restaurant's changes; say so before a pill click does it. -->
-      <span class="switch-hint" hidden={!v.count || v.busy || v.selectedCount < 2 || v.readOnly}>Saves when you switch restaurant</span>
-      <button class="undo-button" hidden={!v.count} disabled={v.busy} aria-label="Undo changes" title="Undo changes" onclick={undo}><Undo2 size={16} aria-hidden="true" /></button>
-      <button class="submit-button" disabled={!v.count || v.busy || Boolean(v.issue) || v.readOnly}
-        aria-label={v.busy ? 'Saving changes' : v.count ? `Submit changes for ${v.active.shortName}` : v.pending ? 'No changes here' : 'All saved'}
-        title={(v.readOnly ? v.writeReason || 'Reconnect dining before saving' : '') || v.issue || (v.busy ? 'Saving…' : v.count ? `Submit ${v.count} ${v.count === 1 ? 'change' : 'changes'} for ${v.active.shortName}` : v.pending ? 'No changes here' : 'All saved')}
+      <span class="switch-hint" hidden={!v.count || v.busy || v.unknown || v.selectedCount < 2 || v.readOnly}>Saves when you switch restaurant</span>
+      <button class="undo-button" hidden={!v.count} disabled={v.busy || v.unknown} aria-label="Undo changes" title={v.unknown ? 'Check save status before undoing' : 'Undo changes'} onclick={undo}><Undo2 size={16} aria-hidden="true" /></button>
+      <button class="submit-button" disabled={v.busy || (!v.unknown && (!v.count || Boolean(v.issue) || v.readOnly))}
+        aria-label={v.verifying ? 'Checking save status' : v.unknown ? 'Check save status' : v.busy ? 'Saving changes' : v.count ? `Submit changes for ${v.active.shortName}` : v.pending ? 'No changes here' : 'All saved'}
+        title={v.unknown ? 'Check save status · reads reservations without submitting changes' : (v.readOnly ? v.writeReason || 'Reconnect dining before saving' : '') || v.issue || (v.busy ? 'Saving…' : v.count ? `Submit ${v.count} ${v.count === 1 ? 'change' : 'changes'} for ${v.active.shortName}` : v.pending ? 'No changes here' : 'All saved')}
         onclick={() => controller.submit()}>
-        {#if v.readOnly}<Lock size={18} aria-hidden="true" />
-        {:else if v.busy}<Steam size={18} />
+        {#if v.busy}<Steam size={18} />
+        {:else if v.unknown}<RefreshCw size={18} aria-hidden="true" />
+        {:else if v.readOnly}<Lock size={18} aria-hidden="true" />
         {:else if v.count}<Save size={18} aria-hidden="true" /><span>{v.count}</span>
         {:else if v.pending}<CircleMinus size={18} aria-hidden="true" />
         {:else}<Check size={18} aria-hidden="true" />{/if}
-        <span class="sr-only">{v.busy ? 'Saving…' : v.count ? `Submit · ${v.count}` : v.pending ? 'No changes here' : 'All saved'}</span>
+        <span class="sr-only">{v.verifying ? 'Checking save status' : v.unknown ? 'Check save status' : v.busy ? 'Saving…' : v.count ? `Submit · ${v.count}` : v.pending ? 'No changes here' : 'All saved'}</span>
       </button>
     </div>
   </div>

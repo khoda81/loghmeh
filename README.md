@@ -127,7 +127,7 @@ Left/Right keys, or Shift+scroll to change weeks. Compact actions and reservatio
 states use Lucide icons with tooltips. These interactions were checked against
 fictional menus, including locked reservations and a failed menu request.
 
-There are 84 passing Bun tests and 20 passing browser parser checks. The
+There are 94 passing Bun tests and 20 passing browser parser checks. The
 write serializer and reconciliation logic are tested with fictional HTTP
 responses; one live change is verified. General refund behavior and batch
 atomicity remain unverified. See
@@ -169,6 +169,9 @@ Useful local checks:
   simulates the visit locally; the next check succeeds without opening a real site.
 - Add `?menu-error=1` to inspect a failed weekly menu load, its error banner,
   and the restaurant retry state.
+- Add `?save-reply=lost` to simulate a saved reservation with a lost extension
+  reply. `?save-reply=unavailable` also fails the first read-back connection,
+  showing the unverified state and the read-only **Check save status** action.
 - `/tests/browser-mobile.html` — 390px responsive preview.
 - `/src/probe.html` — the separate read-only development probe. The shipped
   planner's Report button provides connection diagnostics.
@@ -188,6 +191,15 @@ a dismissible error banner. Its bar fills over 12–24 seconds before dismissing
 the timer pauses while hovered, focused, behind a dialog, or in a hidden tab.
 Additional errors wait their turn. Dismissing the banner keeps the restaurant's
 error/retry state; the browser console also keeps the message and error code.
+
+A lost save reply does not mean the reservation failed. Loghmeh makes one
+read-only recovery attempt, checks the same account, and adopts the reservations
+and balance returned by dining. If verification is unavailable, it keeps the
+submitted intent as **unverified** and labels the balance as last known. Submit
+and the restaurant retry control become **Check save status**, which reads state
+without resubmitting changes. Edits made during the save are retained. Once a
+fresh read identifies unapplied changes, a separate explicit submission can
+send the remaining draft.
 
 Packages contain the unminified build, the MIT license, and bundled-library notices; Chrome gets a derived
 manifest. `dist/loghmeh-0.7.0-source.zip` holds the sources that addons.mozilla.org

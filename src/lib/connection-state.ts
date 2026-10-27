@@ -72,4 +72,10 @@ export class ConnectionController {
     this.state = { ...this.state, ...connectionFailure(new ProbeError(code ?? 'unexpected-error', message)) };
     this.actions.changed();
   }
+
+  verified(result: { writable: boolean; writeReason: string }) {
+    if (this.pending || this.opening) return;
+    this.state = { phase: result.writable ? 'connected' : 'read-only', message: result.writeReason, checkedAt: Date.now() };
+    this.actions.changed();
+  }
 }

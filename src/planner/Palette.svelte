@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Plus, EyeOff, RefreshCw, CircleAlert } from '@lucide/svelte';
+  import { Plus, EyeOff, RefreshCw, CircleAlert, CircleHelp } from '@lucide/svelte';
   import Steam from './Steam.svelte';
   import type { PlannerController } from '../lib/planner-controller.ts';
   import type { PlannerModel } from '../lib/planner-model.ts';
@@ -38,13 +38,15 @@
           {#if status.busy}<Steam size={24} />{:else}<span class="color-dot"></span>{/if}
           <span class="pill-name" dir="auto">{restaurant.name}</span>
           {#if status.error}
-            <CircleAlert size={14} class="status-error" aria-hidden="true" />
+            {#if model.saves.get(id)?.state === 'unknown'}<CircleHelp size={14} class="status-error" aria-hidden="true" />{:else}<CircleAlert size={14} class="status-error" aria-hidden="true" />{/if}
           {:else if status.text && !status.busy}
             <span class="pill-status" aria-hidden="true">{count}</span>
           {/if}
         </button>
         {#if status.error}
-          <button class="retry-pill" aria-label="Retry {restaurant.shortName}" title="Retry {restaurant.name}" onclick={() => controller.retry(id)}><RefreshCw size={14} aria-hidden="true" /></button>
+          <button class="retry-pill" aria-label={model.saves.get(id)?.state === 'unknown' ? `Check save status for ${restaurant.shortName}` : `Retry ${restaurant.shortName}`}
+            title={model.saves.get(id)?.state === 'unknown' ? 'Read reservations without submitting changes' : `Retry ${restaurant.name}`}
+            onclick={() => controller.retry(id)}><RefreshCw size={14} aria-hidden="true" /></button>
         {/if}
         <button class="place-remove" aria-label="Hide {restaurant.shortName} from the calendar" title="Hide {restaurant.name} from the calendar" disabled={v.single}
           onclick={() => controller.remove(id)}><EyeOff size={14} aria-hidden="true" /></button>

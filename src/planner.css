@@ -177,6 +177,8 @@ dialog::backdrop { background: #263a2e4d; backdrop-filter: blur(2px); }
   .wallet { padding-top: 12px; }
   .wallet-top { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
   .wallet-amount .eyebrow { display: none; }
+  .wallet-amount.unverified { flex-wrap: wrap; gap: 2px 6px; }
+  .wallet-amount.unverified .eyebrow { display: block; width: 100%; font-size: 9px; }
   .wallet-amount strong { font-size: 24px; }
   .wallet-projection { font-size: 10px; }
   .wallet-actions { gap: 8px; grid-column: 1 / -1; justify-content: flex-end; }

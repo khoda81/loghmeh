@@ -77,7 +77,9 @@
         choice, removing,
         restaurant: model.restaurants.get(choice.restaurantId)!,
         draft: model.drafts.has(choice.id),
-        saving: model.inflight.has(choice.id),
+        saving: model.inflight.has(choice.id) && model.saves.get(choice.restaurantId)?.state !== 'unknown',
+        unverified: model.inflight.has(choice.id) && model.saves.get(choice.restaurantId)?.state === 'unknown',
+        verifying: model.inflight.has(choice.id) && model.saves.get(choice.restaurantId)?.state === 'verifying',
         failed: model.drafts.has(choice.id) && model.saves.get(choice.restaurantId)?.state === 'error',
       })) }] as const;
     })));

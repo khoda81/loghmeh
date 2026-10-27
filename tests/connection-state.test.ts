@@ -95,3 +95,15 @@ test('connection errors report each attempt once and opening failures report a s
   await connection.openDining();
   expect(failures[2].message).toBe('The dining tab could not be opened. Try opening it again.');
 });
+
+test('read-only save verification can restore a previously invalidated connection state', async () => {
+  let calls = 0;
+  const connection = new ConnectionController({ connect: async () => { calls++; return { writable: true, writeReason: '' }; }, openDining: async () => {}, changed() {} });
+  await connection.check();
+  connection.invalidate('save-unknown', 'The extension lost the save reply.');
+  expect(connection.state.phase).toBe('error');
+  connection.verified({ writable: true, writeReason: '' });
+  expect(connection.state.phase).toBe('connected');
+  expect(connection.state.code).toBeUndefined();
+  expect(calls).toBe(1);
+});

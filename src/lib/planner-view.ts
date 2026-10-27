@@ -38,6 +38,8 @@ export function restaurantStatus(model: PlannerModel, id: string, week: string):
   const pending = loads.filter(load => ['queued', 'loading'].includes(load.state));
   const count = model.changes(id).length;
   const changes = `${count} ${count === 1 ? 'change' : 'changes'}`;
+  if (save?.state === 'unknown') return { text: 'Save unverified', error: true, title: save.message };
+  if (save?.state === 'verifying') return { text: 'Checking save status…', busy: true };
   if (save?.state === 'error') return { text: 'Not saved', error: true, title: save.message };
   if (save?.state === 'queued' || save?.state === 'saving') return { text: save.state === 'queued' ? 'Save queued' : 'Saving…', busy: true };
   const failed = loads.find(load => load.state === 'error');

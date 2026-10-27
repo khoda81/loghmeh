@@ -75,6 +75,11 @@ test('slots explain loading, failed, and closed menus; conflicts mark the slot',
   await controller.idle();
   expect(slotView(model, '2026-11-01', '1', '2026-10-31').state).toBe('retry');
   expect(restaurantStatus(model, 'kooy', '2026-10-31')).toMatchObject({ text: 'Load failed', error: true, title: 'Could not load this menu. Try again.' });
+  model.saves.set('kooy', { state: 'unknown', code: 'save-unknown', message: 'Dining may have saved these changes.' });
+  expect(restaurantStatus(model, 'kooy', '2026-10-31')).toMatchObject({ text: 'Save unverified', error: true });
+  model.saves.set('kooy', { state: 'verifying' });
+  expect(restaurantStatus(model, 'kooy', '2026-10-31')).toMatchObject({ text: 'Checking save status…', busy: true });
+  model.saves.delete('kooy');
   controller.showWeek(week);
   await controller.idle();
   controller.choose(slotView(model, '2026-10-25', '1', week).ghosts[0]);

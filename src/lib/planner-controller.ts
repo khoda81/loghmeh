@@ -1,9 +1,9 @@
 import { menuKey, type PlannerModel } from './planner-model.ts';
-import { errorDetails } from './transport.ts';
-import type { Choice, PlannerService } from './types.ts';
+import { errorDetails, ProbeError } from './transport.ts';
+import type { CapturedChange, Choice, PlannerService } from './types.ts';
 
 interface Task {
-  kind: 'read' | 'save';
+  kind: 'read' | 'save' | 'verify';
   restaurantId: string;
   week?: string;
   run(): Promise<void>;
@@ -27,6 +27,7 @@ export class PlannerController {
   running: QueuedTask | null = null;
   activeWeek: string | null = null;
   saveJobs = new Map<string, Promise<void>>();
+  uncertainSaves = new Map<string, CapturedChange[]>();
   saveAgain = new Set<string>();
   message = '';
   sequence = 0;
@@ -50,7 +51,7 @@ export class PlannerController {
 
   async pump() {
     if (this.running || !this.queue.length) return;
-    const priority = (task: Task) => task.kind === 'save' ? 0 : task.restaurantId === this.model.activeId ? 1 : 2;
+    const priority = (task: Task) => task.kind !== 'read' ? 0 : task.restaurantId === this.model.activeId ? 1 : 2;
     this.queue.sort((a, b) => priority(a) - priority(b) || a.sequence - b.sequence);
     const task = this.queue.shift()!;
     this.running = task;
@@ -126,7 +127,7 @@ export class PlannerController {
 
   remove(restaurantId: string) {
     if (this.model.selectedIds.length === 1) return false;
-    if (this.model.changes(restaurantId).length || this.saveJobs.has(restaurantId)) {
+    if (this.model.changes(restaurantId).length || this.saveJobs.has(restaurantId) || this.uncertainSaves.has(restaurantId)) {
       this.onError({ operation: 'edit', restaurantId, message: 'Submit or undo this restaurant’s changes before hiding it.' });
       this.changed();
       return false;
@@ -153,6 +154,8 @@ export class PlannerController {
   }
 
   submit(restaurantId = this.model.activeId): Promise<void> {
+    // Until the previous outcome is known, Submit and pill switches only read back.
+    if (this.uncertainSaves.has(restaurantId)) return this.checkSave(restaurantId);
     if (this.service.mode === 'live' && !this.service.writable) {
       this.onError({ operation: 'save', restaurantId, message: this.service.writeReason || 'Dining is connected in read-only mode.' });
       this.changed();
@@ -192,8 +195,12 @@ export class PlannerController {
           this.changed();
         } catch (error) {
           const { message, code } = errorDetails(error);
-          this.model.release(changes.filter(change => this.model.inflight.has(change.choice.id)));
-          this.model.saves.set(restaurantId, { state: 'error', message, code });
+          const unknown = code === 'save-unknown';
+          // Preserve attempted intents, including reversals made during the save.
+          // Later weeks were never sent and may be released normally.
+          this.model.release(changes.filter(change => this.model.inflight.has(change.choice.id) && (!unknown || change.choice.week !== week)));
+          if (unknown) this.uncertainSaves.set(restaurantId, batch.filter(change => this.model.inflight.has(change.choice.id)));
+          this.model.saves.set(restaurantId, { state: unknown ? 'unknown' : 'error', message, code });
           this.saveAgain.delete(restaurantId);
           this.onError({ operation: 'save', restaurantId, week, code, message: `${message}${completed ? ` ${completed} earlier changes were saved.` : ''}` });
           this.changed();
@@ -214,8 +221,48 @@ export class PlannerController {
   }
 
   retry(restaurantId: string) {
+    if (this.uncertainSaves.has(restaurantId)) return this.checkSave(restaurantId);
     if (this.model.changes(restaurantId).length) this.submit(restaurantId);
     if (this.activeWeek) this.load(restaurantId, this.activeWeek, true);
+  }
+
+  checkSave(restaurantId: string): Promise<void> {
+    if (this.saveJobs.has(restaurantId)) return this.saveJobs.get(restaurantId)!;
+    const changes = this.uncertainSaves.get(restaurantId);
+    if (!changes?.length) return Promise.resolve();
+    const week = changes[0].choice.week;
+    this.model.saves.set(restaurantId, { state: 'verifying' });
+    const job = this.enqueue({ kind: 'verify', restaurantId, week, run: async () => {
+      try {
+        if (!this.service.reconcile) throw new ProbeError('save-unknown', 'This save needs to be checked on dining.');
+        const result = await this.service.reconcile(restaurantId, week, changes);
+        if (!result.menu || !result.appliedIds) throw new ProbeError('save-unknown', 'Dining did not return a verifiable reservation snapshot.');
+        this.model.commit(changes.filter(change => result.appliedIds!.includes(change.choice.id)), result.balanceRials);
+        this.model.receiveMenu(result.menu);
+        this.model.release(changes); // Only now is it safe to compare newer intent with actual state.
+        this.model.loads.set(menuKey(restaurantId, week), { restaurantId, week, state: 'ready' });
+        this.uncertainSaves.delete(restaurantId);
+        if (result.complete) {
+          this.model.saves.set(restaurantId, { state: 'saved' });
+          this.changed('Saved reservations verified with dining. Nothing was resubmitted.');
+        } else {
+          const message = result.message || 'Some changes are not applied in dining. Your remaining choices are kept.';
+          this.model.saves.set(restaurantId, { state: 'error', message });
+          this.onError({ operation: 'save', restaurantId, week, message });
+          this.changed();
+        }
+      } catch (error) {
+        const message = errorDetails(error).message;
+        this.model.saves.set(restaurantId, { state: 'unknown', code: 'save-unknown', message });
+        this.onError({ operation: 'save', restaurantId, week, code: 'save-unknown', message });
+        this.changed();
+      }
+    } });
+    this.saveJobs.set(restaurantId, job);
+    // A verification must never trigger an automatic follow-up write.
+    job.then(() => { this.saveJobs.delete(restaurantId); this.saveAgain.delete(restaurantId); this.changed(); });
+    this.changed();
+    return job;
   }
 
   async idle() {
