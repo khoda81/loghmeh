@@ -8,7 +8,7 @@ Independent, unofficial extension for Firefox / Zen 142+ and Chrome / Chromium 1
 **Version 0.7.0 · MIT.** Packages are attached to each
 [GitHub release](https://github.com/khoda81/loghmeh/releases).
 
-![The weekly planner with fictional menus and pending balance changes](docs/assets/planner-demo.jpg)
+![Development preview of the weekly planner with fictional menus and pending balance changes](docs/assets/planner-preview.png)
 
 ## Use in Zen / Firefox
 
@@ -127,7 +127,7 @@ Left/Right keys, or Shift+scroll to change weeks. Compact actions and reservatio
 states use Lucide icons with tooltips. These interactions were checked against
 fictional menus, including locked reservations and a failed menu request.
 
-There are 80 passing Bun tests and 20 passing browser parser checks. The
+There are 81 passing Bun tests and 20 passing browser parser checks. The
 write serializer and reconciliation logic are tested with fictional HTTP
 responses; one live change is verified. General refund behavior and batch
 atomicity remain unverified. See
