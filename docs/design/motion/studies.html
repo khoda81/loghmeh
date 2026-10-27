@@ -260,7 +260,7 @@ h2 [lang=fa]{font-weight:620;color:var(--forest);font-size:.72em;letter-spacing:
             <dt data-s="checking"><i class="dot dot-checking"></i>Checking</dt><dd data-s="checking">1.7 s beat. Each ring surges ⅐ or ⅑ of a turn (cubic in-out over 60% of the beat), then rests. Rings are offset 220 ms and grains ripple with 0–120 ms micro-delays; orbits breathe in 4.5% per surge. Saffron leaves a trail only while it moves.</dd>
             <dt data-s="open"><i class="dot dot-open"></i>Open</dt><dd data-s="open">Grains climb into a pointed arch (طاق) over 1.0 s, staggered 0–550 ms along the path; a sage niche fills behind the bowl. One saffron thread hangs in the keystone gap and nods twice every 3.2 s. Everything else is still.</dd>
             <dt data-s="connected"><i class="dot dot-connected"></i>Connected</dt><dd data-s="connected">Spiral pour, 850 ms per grain, staggered bottom-up across 1.0 s so the mound builds from its base. Saffron lands from 1.2 s, the bowl gives once (3%), a copper ring seals at 1.85 s, steam drifts.</dd>
-            <dt data-s="failed"><i class="dot dot-failed"></i>Cannot reach</dt><dd data-s="failed">Grains drop with a bounce (1.15 s, 0–300 ms random delays) and lie on the table; the outer orbit is drawn broken. Nothing moves after ~1.5 s.</dd>
+            <dt data-s="failed"><i class="dot dot-failed"></i>Cannot reach</dt><dd data-s="failed">Grains accelerate downward and settle without bouncing (1.15 s, 0–300 ms random delays) and lie on the table; the outer orbit is drawn broken. Nothing moves after ~1.5 s.</dd>
           </dl>
         </div>
         <div class="score-wrap"><p class="label">Score <span>first 5 s of the selected state</span></p><div class="score"></div></div>
@@ -567,7 +567,7 @@ class OrbitStudy extends CanvasStudy{
       o.x=ox+Math.cos(aa)*rr;o.y=oy+Math.sin(aa)*rr;
       o.rot=lerpAng(f.rot,to.rot,e)+Math.sin(Math.PI*e)*1.8;o.layer=k<.82?2:to.layer;
     }else if(st==='failed'){
-      const e=E.out(k);o.x=lerp(f.x,to.x,e);o.y=lerp(f.y,to.y,E.bounce(k));o.rot=lerpAng(f.rot,to.rot,e);o.layer=2;
+      const e=E.out(k);o.x=lerp(f.x,to.x,e);o.y=lerp(f.y,to.y,k*k);o.rot=lerpAng(f.rot,to.rot,e);o.layer=2;
     }else{
       const e=E.inOut(k);o.x=lerp(f.x,to.x,e);o.y=lerp(f.y,to.y,e)-(st==='open'?Math.sin(Math.PI*e)*22:0);o.rot=lerpAng(f.rot,to.rot,e);
     }
@@ -590,10 +590,12 @@ class OrbitStudy extends CanvasStudy{
     ctx.fillStyle='rgba(38,58,46,.07)';ctx.beginPath();ctx.ellipse(300,this.table-2,96,7,0,0,TAU);ctx.fill();
     ctx.strokeStyle='rgba(38,58,46,.15)';ctx.lineWidth=gs*.9;ctx.beginPath();ctx.moveTo(92,this.table);ctx.lineTo(508,this.table);ctx.stroke();
     this.seal(ctx);
-    this.guides(ctx,true);
     if(this.dec.niche>.001)this.niche(ctx,this.dec.niche);
+    this.layer(ctx,0);this.bowlBack(ctx);this.layer(ctx,1);this.bowlFront(ctx);
+    // Draw orbit ink above the bowl, then the foreground grains above the ink.
+    this.guides(ctx,true);this.guides(ctx,false);
     if(this.dec.broken>.001)this.broken(ctx,this.dec.broken);
-    this.layer(ctx,0);this.bowlBack(ctx);this.layer(ctx,1);this.bowlFront(ctx);this.guides(ctx,false);this.layer(ctx,2);
+    this.layer(ctx,2);
     if(this.dec.steam>.001)this.steam(ctx,this.dec.steam);
     this.knock(ctx);
   }
@@ -1055,7 +1057,7 @@ const SCORE={
     checking:[['bloom out of the bowl',0,1.8],['surge + breathe · 1.7 s beat',0,5,'loop']],
     open:[['climb into the arch',0,1.55],['niche fills',.95,1.65],['keystone nods ×2 / 3.2 s',1.5,5,'loop']],
     connected:[['spiral pour',0,1.85],['bowl gives',.95,1.45],['saffron lands',1.2,2.6],['copper seal',1.85,3.26],['steam',1.9,5,'loop']],
-    failed:[['fall + bounce',0,1.45],['orbit breaks',1.05,1.55],['still',1.55,5,'hold']]
+    failed:[['fall + settle',0,1.45],['orbit breaks',1.05,1.55],['still',1.55,5,'hold']]
   },
   loom:{
     checking:[['shuttle to start',0,.3],['4 passes × 0.85 s',.3,3.7,'loop'],['hold',3.7,4],['reel back',4,4.8,'loop']],
