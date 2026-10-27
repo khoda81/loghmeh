@@ -10,7 +10,7 @@ const files: Record<string, [string, string]> = {
   '/icon.svg': ['src/icon.svg', 'image/svg+xml'],
 };
 const server = Bun.serve({
-  hostname: '127.0.0.1', port: Number(Bun.env.LOGHMEH_MOTION_PORT ?? 0),
+  hostname: Bun.env.LOGHMEH_MOTION_HOST ?? '127.0.0.1', port: Number(Bun.env.LOGHMEH_MOTION_PORT ?? 0),
   async fetch(request) {
     const entry = files[new URL(request.url).pathname];
     if (!entry || !['GET', 'HEAD'].includes(request.method)) return new Response('Not found', { status: 404 });

@@ -27,6 +27,15 @@ Open the printed localhost URL. While generating, it shows an honest waiting
 page; after completion it shows the gallery. The study allows inline code
 locally, with network connections blocked. The extension's policy is unaffected.
 
+To view on another device on the same local network, bind the preview explicitly:
+
+```bash
+LOGHMEH_MOTION_HOST=0.0.0.0 bun docs/design/motion/serve.ts
+```
+
+Use this computer's Wi-Fi address and the printed port on the other device.
+Only the gallery, job status, and its local font/logo are served.
+
 Start a new run only when needed (the interactive command waits until it finishes):
 
 ```bash
