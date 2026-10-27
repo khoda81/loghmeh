@@ -23,9 +23,6 @@ a:hover { text-decoration: underline; }
 .topbar-actions > a:hover, .topbar-actions > button:hover { background: #ecefe5; }
 .demo-label { display: flex; align-items: center; gap: 7px; border: 0; background: transparent; padding: 8px 0 8px 8px; font-size: 12px; color: #81754d; }
 .live-label { padding: 8px 0; border: 0; background: transparent; color: var(--green); font-size: 11px; }
-.live-connection { padding: 16px 0; font-size: 12px; }
-.live-connection p { margin: 0 0 10px; }
-.live-connection > div { display: flex; align-items: center; gap: 18px; }
 .report-json { width: 100%; min-height: 320px; resize: vertical; border: 1px solid var(--line); border-radius: 6px; padding: 12px; background: var(--paper); color: var(--ink); font: 11px/1.6 monospace; }
 .budget-header { position: sticky; top: 0; z-index: 20; background: var(--paper); border-bottom: 1px solid var(--line); padding: 0 var(--page-gutter); }
 .wallet { padding-top: 12px; }

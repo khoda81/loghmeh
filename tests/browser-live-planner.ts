@@ -2,12 +2,16 @@
 // No university network request is possible in this fixture.
 import { DiningSession } from '../src/lib/dining-session.ts';
 import { createMessageHandler } from '../src/lib/background-bridge.ts';
-import { buildDiningRequest } from '../src/lib/transport.ts';
+import { buildDiningRequest, ProbeError } from '../src/lib/transport.ts';
 import { bootstrapFixture } from '../src/demo.ts';
 import { addDays, weekOf, tehranToday } from '../src/lib/planner-model.ts';
 import type { ExtensionApi } from '../src/lib/types.ts';
 import { fake } from './fake.ts';
 const current = weekOf(tehranToday());
+const connectionScenario = new URLSearchParams(location.search).get('connection');
+let hasAccess = connectionScenario !== 'permission';
+let diningVisited = false;
+let connectionAttempts = 0;
 let cursor = current;
 let balance = 2000000;
 const reserved = new Set([`20|${addDays(current, 8)}|1|101`]);
@@ -26,7 +30,14 @@ function menu(rest) {
 const transport = { async request(operation: string, parameters: Record<string, any> = {}) {
   buildDiningRequest(operation,parameters);
   await new Promise(resolve=>setTimeout(resolve,120));
-  if(operation==='bootstrap') return {body:bootstrapFixture.replace('2,000,000',String(balance))};
+  if(operation==='bootstrap') {
+    connectionAttempts++;
+    const fail = !diningVisited && (['redirect', 'login', 'network'].includes(connectionScenario ?? '') || connectionScenario === 'expired' && connectionAttempts > 1);
+    if(fail) throw new ProbeError(connectionScenario === 'login' ? 'login-required' : connectionScenario === 'network' ? 'network-error' : 'redirect-required',
+      connectionScenario === 'network' ? 'Could not reach dining. Check your university network connection.' : 'Dining redirected the connection check.',
+      {operation:'bootstrap',path:'/Reserves',method:'GET',status:connectionScenario === 'login' ? 401 : 0});
+    return {body:bootstrapFixture.replace('2,000,000',String(balance))};
+  }
   if(operation==='restaurants') return {body:'[{"id":20,"value":"رستوران نمونه اول · بخش مکمل دانشگاه · سلف دانشجویی و غذاهای متنوع با ظرفیت محدود و پیش‌پرداخت"},{"id":21,"value":"رستوران نمونه دوم"}]'};
   if(operation==='current') cursor=current;
   if(operation==='next') cursor=addDays(cursor,7);
@@ -43,11 +54,14 @@ const transport = { async request(operation: string, parameters: Record<string, 
   return {body:menu(parameters.restId)};
 } };
 const api: ExtensionApi = { runtime:{id:'loghmeh-test-fixture', sendMessage:null, getURL:path=>`${location.origin}/src/${path}`,getManifest:()=>({version:'0.6.0-fixture'})},
-  permissions:{contains:async()=>true,request:async()=>true},tabs:{create:async()=>{}} };
+  permissions:{contains:async()=>hasAccess,request:async()=>hasAccess=true},tabs:{create:async()=>{ diningVisited=true; }} };
 const session = new DiningSession({transport:fake(transport)});
 const handler = createMessageHandler(api,session);
 api.runtime.sendMessage = message=>new Promise(resolve=>handler(message,{id:api.runtime.id,url:api.runtime.getURL('planner.html')},(result: any)=>{
-  if(result.ok&&message.operation==='connect') result.value.fixture=true;
+  if(result.ok&&message.operation==='connect') {
+    result.value.fixture=true;
+    if(connectionScenario==='read-only') { result.value.writable=false; result.value.writeReason='This fixture simulates an account with multiple wallets. Reservations are read-only.'; }
+  }
   resolve(result);
 }));
 globalThis.browser=api;

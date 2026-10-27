@@ -124,7 +124,7 @@ Left/Right keys, or Shift+scroll to change weeks. Compact actions and reservatio
 states use Lucide icons with tooltips. These interactions were checked against
 fictional menus, including locked reservations and a failed menu request.
 
-There are 69 passing Bun tests and 20 passing browser parser checks. The
+There are 77 passing Bun tests and 20 passing browser parser checks. The
 write serializer and reconciliation logic are tested with fictional HTTP
 responses; one live change is verified. General refund behavior and batch
 atomicity remain unverified. See
@@ -159,6 +159,10 @@ Useful local checks:
 - `/tests/browser-live-planner.html` — the live client/background/parser stack
   with fictional HTTP responses; no university requests. Add `?reject=1` to
   exercise business rejection.
+- Add `?connection=redirect`, `login`, `network`, `permission`, `read-only`, or
+  `expired` to that fixture to inspect connection recovery. `expired` fails on
+  Refresh after a successful initial connection. In these fixtures, Open dining
+  simulates the visit locally; the next check succeeds without opening a real site.
 - `/tests/browser-mobile.html` — 390px responsive preview.
 - `/src/probe.html` — the separate read-only connection probe.
 
@@ -167,6 +171,10 @@ Useful local checks:
 Estedad is bundled locally for Persian and Latin text, including its variable weights.
 Typography needs no public internet access; live dining only needs access to the
 university service. The font's OFL license is included in the third-party notices.
+
+Connection checks distinguish redirects from confirmed sign-in failures and
+network errors. After you explicitly open dining from Loghmeh, returning to the
+planner checks once automatically. Checks never automatically submit reservations.
 
 Packages contain the unminified build, the MIT license, and bundled-library notices; Chrome gets a derived
 manifest. `dist/loghmeh-0.7.0-source.zip` holds the sources that addons.mozilla.org

@@ -2,6 +2,7 @@
   import { Activity, FileText, RefreshCw, FlaskConical, BookOpen, Plug } from '@lucide/svelte';
   import { onMount } from 'svelte';
   import Dialog from './Dialog.svelte';
+  import ConnectionPanel from './ConnectionPanel.svelte';
   import Palette from './Palette.svelte';
   import PlacePicker from './PlacePicker.svelte';
   import Wallet from './Wallet.svelte';
@@ -12,7 +13,8 @@
   import { LiveDiningService } from '../lib/planner-live.ts';
   import { PlannerModel, addDays, menuKey, type PlannerState } from '../lib/planner-model.ts';
   import { calendarClock, restoreCalendarWeek } from '../lib/planner-view.ts';
-  import { errorDetails } from '../lib/transport.ts';
+  import { ProbeError } from '../lib/transport.ts';
+  import { ConnectionController } from '../lib/connection-state.ts';
   import type { Restaurant } from '../lib/types.ts';
 
   const api = globalThis.browser ?? globalThis.chrome;
@@ -41,8 +43,14 @@
   let controller = $state.raw<PlannerController>();
   let revision = $state(0);
   let accountTag: string | null = null;
-  let connecting = $state(false);
-  const connection = $state({ visible: isLive, message: 'Connecting to your dining session…', retryLabel: 'Connect dining', liveLabel: 'Connect dining' });
+  const connectionController = new ConnectionController({
+    connect: performConnection,
+    openDining: () => sessionClient!.openLogin(),
+    changed: () => { revision++; },
+  });
+  const connection = $derived.by(() => { void revision; return { ...connectionController.state, opening: connectionController.opening }; });
+  const connecting = $derived(connection.phase === 'checking');
+  const liveLabel = $derived(connecting ? 'Checking dining connection' : connection.phase === 'connected' ? 'Dining connected · Refresh' : 'Check dining connection');
   let toast = $state('');
   let toastTimer: ReturnType<typeof setTimeout>;
   let lastMessage = '';
@@ -67,8 +75,7 @@
       const expired = [...model.loads.values(), ...model.saves.values()].find(state => EXPIRED.includes(state.code ?? ''));
       if (expired) {
         live.writable = false;
-        connection.visible = true;
-        connection.message = `${expired.message} Your pending choices stay in this tab.`;
+        connectionController.invalidate(expired.code, expired.message ?? 'The dining session needs to be checked again.');
       }
     }
     if (controller.message && controller.message !== lastMessage) {
@@ -101,17 +108,17 @@
     if (next.today !== clock.today || next.currentMeal !== clock.currentMeal) clock = next;
   }
 
-  async function connectDining() {
-    if (!live || !sessionClient || connecting) return;
-    connecting = true;
-    connection.visible = true;
-    connection.message = 'Connecting and discovering your eligible restaurants…';
+  async function performConnection(interactive: boolean) {
+    if (!live || !sessionClient) throw new Error('The dining connection is available inside the extension.');
+    live.writable = false;
     try {
-      if (!await sessionClient.hasPermission() && !await sessionClient.requestPermission()) throw new Error('Allow dining access to connect your browser session.');
+      if (!await sessionClient.hasPermission() && (!interactive || !await sessionClient.requestPermission())) {
+        throw new ProbeError('permission-required', 'Allow dining access to connect your browser session.');
+      }
       const result = await live.connect();
       if (model && accountTag !== result.accountTag) {
         live.writable = false;
-        throw new Error('The signed-in account changed. Open a new Loghmeh tab to start with that account. Your old drafts stay here.');
+        throw new ProbeError('account-changed', 'The signed-in account changed. Open a new Loghmeh tab to start with that account. Your old drafts stay here.');
       }
       if (model && model.selectedIds.some(id => !result.restaurants.some(restaurant => restaurant.id === id))) {
         live.writable = false;
@@ -135,16 +142,23 @@
         for (const [id, state] of model.saves) if (EXPIRED.includes(state.code ?? '')) model.saves.delete(id);
         controller.showWeek(activeWeek);
       }
-      connection.liveLabel = 'Live · Refresh';
-      connection.visible = !result.writable;
-      connection.message = result.writeReason;
+      return result;
     } catch (error) {
-      connection.message = errorDetails(error).message;
-      connection.retryLabel = connection.liveLabel = 'Reconnect dining';
+      live.sessionVerified = false;
+      live.writable = false;
+      live.writeReason = 'Check your dining connection before saving. Your pending choices stay in this tab.';
+      throw error;
     } finally {
-      connecting = false;
       revision++;
     }
+  }
+
+  function connectDining() { return connectionController.check(true); }
+
+  function returnToPlanner() {
+    if (document.hidden) return;
+    refreshCalendarClock();
+    connectionController.returned();
   }
 
   function openReport() {
@@ -160,16 +174,16 @@
   if (!isLive) initializeCalendar(saved?.model || {});
 
   onMount(() => {
-    if (isLive) connectDining();
+    if (isLive) connectionController.check();
     const timer = setInterval(refreshCalendarClock, 60_000);
     return () => clearInterval(timer);
   });
 </script>
 
-<svelte:window onbeforeunload={event => {
+<svelte:window onfocus={returnToPlanner} onbeforeunload={event => {
   if (live && model?.changes().length) { event.preventDefault(); event.returnValue = ''; }
 }} />
-<svelte:document onvisibilitychange={() => { if (!document.hidden) refreshCalendarClock(); }} />
+<svelte:document onvisibilitychange={returnToPlanner} />
 
 <header class="app-shell">
   <div class="topbar">
@@ -179,23 +193,19 @@
       {#if live}
         <a href={pageUrl('planner.html?demo=1')} aria-label="Sample menus" title="Sample menus"><BookOpen size={18} aria-hidden="true" /></a>
         <button class="live-label" aria-label="Report" title="Connection report" onclick={openReport}><FileText size={18} aria-hidden="true" /></button>
-        <button class="live-label" disabled={connecting} aria-label={connection.liveLabel} title={connection.liveLabel} onclick={connectDining}><RefreshCw size={18} class={connecting ? 'spinning' : ''} aria-hidden="true" /></button>
+        <button class="live-label" disabled={connecting} aria-label={liveLabel} title={liveLabel} onclick={connectDining}><RefreshCw size={18} class={connecting ? 'spinning' : ''} aria-hidden="true" /></button>
       {:else}
         {#if extensionApi}<a href={pageUrl('planner.html')} aria-label="Connect dining" title="Connect dining"><Plug size={18} aria-hidden="true" /></a>{/if}
         <button class="demo-label" aria-label="Interactive demo" title="Interactive demo" onclick={() => simulation?.open()}><FlaskConical size={18} aria-hidden="true" /></button>
       {/if}
     </div>
   </div>
-  {#if live}
-    <div class="live-connection" role="status" hidden={!connection.visible}>
-      <p>{connection.message}</p>
-      <div>
-        <button class="plain-primary" disabled={connecting} onclick={connectDining}>{connection.retryLabel}</button>
-        <button class="undo-button" onclick={() => sessionClient?.openLogin()}>Open dining login</button>
-      </div>
-    </div>
-  {/if}
 </header>
+
+{#if live && connection.phase !== 'connected'}
+  <ConnectionPanel state={connection} compact={Boolean(model)} opening={connection.opening} logo={pageUrl('icon.svg')}
+    oncheck={connectDining} onopen={() => connectionController.openDining()} onreport={openReport} />
+{/if}
 
 {#if model && controller}
   <div class="budget-header">
