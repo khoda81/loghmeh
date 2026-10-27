@@ -5,6 +5,18 @@ The requested model is `claude-opus-5-5` with effort `high`. The brief requests
 three interactive motion concepts and makes clear that authentication states
 are simulated. Claude has no file-editing or network tools in this run.
 
+The original completed response is preserved in `studies.html`: Saffron Orbit,
+Loom of Letters, and Week to Plate. It was recovered from two assistant text
+fragments in `gallery-1793088720936.jsonl`; the final result event contained only
+the second fragment. Recovery concatenates text without inserting characters,
+because the split occurred inside the CSS word `solid`. The raw log and failed
+status were preserved under `outputs/motion/`.
+
+The preview serves the current `outputs/motion/gallery.html` when present and
+falls back to the committed original. `/original.html` always serves that original.
+These are the original concepts; the requested food-only rework is a separate
+design pass, especially for Loom of Letters.
+
 Check the current job from the repository root:
 
 ```bash

@@ -1,7 +1,7 @@
 // Runs the user-requested Claude motion study independently of the chat/terminal.
 import path from 'node:path';
 import { mkdir } from 'node:fs/promises';
-import { recoverClaudeHtml } from './output.ts';
+import { recoverClaudeHtml } from '../../../scripts/claude-output.ts';
 
 const root = path.resolve(import.meta.dir, '../../..');
 const directory = path.join(root, 'outputs/motion');

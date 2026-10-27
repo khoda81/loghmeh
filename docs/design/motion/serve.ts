@@ -6,6 +6,7 @@ const files: Record<string, [string, string]> = {
   '/': ['outputs/motion/gallery.html', 'text/html; charset=utf-8'],
   '/index.html': ['outputs/motion/gallery.html', 'text/html; charset=utf-8'],
   '/status.json': ['outputs/motion/gallery-status.json', 'application/json'],
+  '/original.html': ['docs/design/motion/studies.html', 'text/html; charset=utf-8'],
   '/Estedad-VF.woff2': ['src/fonts/Estedad-VF.woff2', 'font/woff2'],
   '/icon.svg': ['src/icon.svg', 'image/svg+xml'],
 };
@@ -14,7 +15,10 @@ const server = Bun.serve({
   async fetch(request) {
     const entry = files[new URL(request.url).pathname];
     if (!entry || !['GET', 'HEAD'].includes(request.method)) return new Response('Not found', { status: 404 });
-    const file = Bun.file(path.join(root, entry[0]));
+    let file = Bun.file(path.join(root, entry[0]));
+    if (!await file.exists() && ['/', '/index.html'].includes(new URL(request.url).pathname)) {
+      file = Bun.file(path.join(root, 'docs/design/motion/studies.html'));
+    }
     if (!await file.exists()) {
       if (new URL(request.url).pathname === '/') return new Response('<!doctype html><meta charset="utf-8"><meta http-equiv="refresh" content="10"><title>Loghmeh motion studies</title><h1>The motion studies are still being generated</h1><p>This page refreshes every 10 seconds. <a href="/status.json">Check job status</a>.</p>', { status: 202, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
       return new Response('Not found', { status: 404 });
