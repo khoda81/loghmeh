@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { Undo2, Save, Check, CircleMinus, LoaderCircle, Lock } from '@lucide/svelte';
+  import { Undo2, Save, Check, CircleMinus, Lock } from '@lucide/svelte';
+  import Steam from './Steam.svelte';
   import type { PlannerController } from '../lib/planner-controller.ts';
   import type { LiveDiningService } from '../lib/planner-live.ts';
   import type { PlannerModel } from '../lib/planner-model.ts';
@@ -61,7 +62,7 @@
         title={(v.readOnly ? v.writeReason || 'Reconnect dining before saving' : '') || v.issue || (v.busy ? 'Saving…' : v.count ? `Submit ${v.count} ${v.count === 1 ? 'change' : 'changes'} for ${v.active.shortName}` : v.pending ? 'No changes here' : 'All saved')}
         onclick={() => controller.submit()}>
         {#if v.readOnly}<Lock size={18} aria-hidden="true" />
-        {:else if v.busy}<LoaderCircle size={18} class="spinning" aria-hidden="true" />
+        {:else if v.busy}<Steam size={18} />
         {:else if v.count}<Save size={18} aria-hidden="true" /><span>{v.count}</span>
         {:else if v.pending}<CircleMinus size={18} aria-hidden="true" />
         {:else}<Check size={18} aria-hidden="true" />{/if}

@@ -72,11 +72,8 @@ a:hover { text-decoration: underline; }
 .place-remove { display: grid; place-items: center; width: 32px; flex-shrink: 0; border: 0; background: transparent; color: #91998a; border-radius: 0 22px 22px 0; padding: 0; }
 .place-remove:hover { color: var(--ink); }
 .retry-pill { display: grid; place-items: center; min-width: 30px; padding: 0 6px; background: transparent; border: 0; color: var(--danger); font-size: 10px; border-radius: 20px; }
-.spinner { width: 10px; height: 10px; border: 1.5px solid #d8ded2; border-top-color: var(--restaurant-color); border-radius: 50%; animation: spin .8s linear infinite; flex-shrink: 0; }
-.spinning { animation: spin .8s linear infinite; }
 .status-icon { display: inline-flex; align-items: center; flex-shrink: 0; }
 .status-error { color: var(--danger); }
-@keyframes spin { to { transform: rotate(360deg); } }
 .add-place { display: flex; align-items: center; gap: 5px; border: 1px dashed #c7cfbf; border-radius: 22px; background: transparent; font-size: 11px; white-space: nowrap; min-height: 36px; width: 36px; padding: 0; justify-content: center; }
 .add-place:hover { background: #ecefe5; }
 

@@ -9,6 +9,7 @@ import type { ExtensionApi } from '../src/lib/types.ts';
 import { fake } from './fake.ts';
 const current = weekOf(tehranToday());
 const connectionScenario = new URLSearchParams(location.search).get('connection');
+const delayMs = Math.max(120, Math.min(10000, Number(new URLSearchParams(location.search).get('delay')) || 120));
 let hasAccess = connectionScenario !== 'permission';
 let diningVisited = false;
 let connectionAttempts = 0;
@@ -29,7 +30,7 @@ function menu(rest) {
 }
 const transport = { async request(operation: string, parameters: Record<string, any> = {}) {
   buildDiningRequest(operation,parameters);
-  await new Promise(resolve=>setTimeout(resolve,120));
+  await new Promise(resolve=>setTimeout(resolve,delayMs));
   if(operation==='bootstrap') {
     connectionAttempts++;
     const fail = !diningVisited && (['redirect', 'login', 'network'].includes(connectionScenario ?? '') || connectionScenario === 'expired' && connectionAttempts > 1);

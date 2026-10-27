@@ -1,5 +1,6 @@
 <script lang="ts">
   import { Plus, X, RefreshCw, CircleAlert } from '@lucide/svelte';
+  import Steam from './Steam.svelte';
   import type { PlannerController } from '../lib/planner-controller.ts';
   import type { PlannerModel } from '../lib/planner-model.ts';
   import { restaurantStatus } from '../lib/planner-view.ts';
@@ -32,7 +33,7 @@
           aria-label={[restaurant.name, status.text || status.title].filter(Boolean).join(' · ')}
           title={[restaurant.name, status.text, status.title].filter(Boolean).join('\n')}
           onclick={() => controller.select(id)}>
-          <span class={status.busy ? 'spinner' : 'color-dot'}></span>
+          {#if status.busy}<Steam size={16} />{:else}<span class="color-dot"></span>{/if}
           <span class="pill-name" dir="auto">{restaurant.name}</span>
           {#if status.error}
             <CircleAlert size={14} class="status-error" aria-hidden="true" />

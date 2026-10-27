@@ -3,6 +3,7 @@
   import { onMount } from 'svelte';
   import Dialog from './Dialog.svelte';
   import ConnectionPanel from './ConnectionPanel.svelte';
+  import Steam from './Steam.svelte';
   import Palette from './Palette.svelte';
   import PlacePicker from './PlacePicker.svelte';
   import Wallet from './Wallet.svelte';
@@ -195,7 +196,7 @@
       {#if live}
         <a href={pageUrl('planner.html?demo=1')} aria-label="Sample menus" title="Sample menus"><BookOpen size={18} aria-hidden="true" /></a>
         <button class="live-label" aria-label="Report" title="Connection report" onclick={openReport}><FileText size={18} aria-hidden="true" /></button>
-        <button class="live-label" disabled={connecting} aria-label={liveLabel} title={liveLabel} onclick={connectDining}><RefreshCw size={18} class={connecting ? 'spinning' : ''} aria-hidden="true" /></button>
+        <button class="live-label" disabled={connecting} aria-label={liveLabel} title={liveLabel} onclick={connectDining}>{#if connecting}<Steam size={18} />{:else}<RefreshCw size={18} aria-hidden="true" />{/if}</button>
       {:else}
         {#if extensionApi}<a href={pageUrl('planner.html')} aria-label="Connect dining" title="Connect dining"><Plug size={18} aria-hidden="true" /></a>{/if}
         <button class="demo-label" aria-label="Interactive demo" title="Interactive demo" onclick={() => simulation?.open()}><FlaskConical size={18} aria-hidden="true" /></button>

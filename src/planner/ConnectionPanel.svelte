@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { ArrowUpRight, RefreshCw, LoaderCircle, WifiOff, ShieldCheck } from '@lucide/svelte';
+  import { ArrowUpRight, RefreshCw, WifiOff, ShieldCheck } from '@lucide/svelte';
+  import Steam from './Steam.svelte';
   import type { ConnectionState } from '../lib/connection-state.ts';
 
   let { state, compact, opening, logo, oncheck, onopen, onreport }: {
@@ -33,7 +34,7 @@
   <div class="connection-card">
     <div class="connection-symbol" aria-hidden="true">
       <img src={logo} width="52" height="52" alt="">
-      <span>{#if busy}<LoaderCircle size={15} class="spinning" />{:else if state.phase === 'network'}<WifiOff size={15} />{:else if state.phase === 'read-only'}<ShieldCheck size={15} />{:else}<ArrowUpRight size={15} />{/if}</span>
+      <span>{#if busy}<Steam size={15} />{:else if state.phase === 'network'}<WifiOff size={15} />{:else if state.phase === 'read-only'}<ShieldCheck size={15} />{:else}<ArrowUpRight size={15} />{/if}</span>
     </div>
     <div class="connection-copy" role="status" aria-live="polite" aria-atomic="true">
       <p class="connection-eyebrow">UNIVERSITY DINING</p>
@@ -47,7 +48,7 @@
         <button class="connection-secondary" disabled={busy} onclick={oncheck}><RefreshCw size={15} aria-hidden="true" />{checkLabel}</button>
       {:else}
         <button class="connection-primary" disabled={busy} onclick={oncheck}>
-          {#if busy}<LoaderCircle size={16} class="spinning" aria-hidden="true" />{:else}<RefreshCw size={16} aria-hidden="true" />{/if}
+          {#if busy}<Steam size={16} />{:else}<RefreshCw size={16} aria-hidden="true" />{/if}
           {state.phase === 'waiting' ? 'I’m back · check connection' : checkLabel}
         </button>
         <button class="connection-secondary" disabled={busy || opening} onclick={onopen}>Open dining {state.phase === 'waiting' ? 'again' : 'website'} <ArrowUpRight size={15} aria-hidden="true" /></button>
