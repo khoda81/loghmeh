@@ -31,6 +31,10 @@ function menu(rest) {
 const transport = { async request(operation: string, parameters: Record<string, any> = {}) {
   buildDiningRequest(operation,parameters);
   await new Promise(resolve=>setTimeout(resolve,delayMs));
+  if(operation==='menu' && new URLSearchParams(location.search).has('menu-error')) {
+    throw new ProbeError('server-error', 'Dining returned HTTP 503. The request was not retried.',
+      {operation:'menu',path:'/Reserves/GetReservePage',method:'POST',status:503});
+  }
   if(operation==='bootstrap') {
     connectionAttempts++;
     const fail = !diningVisited && (['redirect', 'login', 'network'].includes(connectionScenario ?? '') || connectionScenario === 'expired' && connectionAttempts > 1);

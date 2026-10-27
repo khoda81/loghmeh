@@ -3,17 +3,18 @@
   import { onMount } from 'svelte';
   import Dialog from './Dialog.svelte';
   import ConnectionPanel from './ConnectionPanel.svelte';
+  import ErrorBanner from './ErrorBanner.svelte';
   import Steam from './Steam.svelte';
   import Palette from './Palette.svelte';
   import PlacePicker from './PlacePicker.svelte';
   import Wallet from './Wallet.svelte';
   import WeekCalendar from './WeekCalendar.svelte';
   import { createDiningAccessClient } from '../lib/client.ts';
-  import { PlannerController } from '../lib/planner-controller.ts';
+  import { PlannerController, type PlannerFailure } from '../lib/planner-controller.ts';
   import { DemoDiningService, RESTAURANTS, type DemoServerState } from '../lib/planner-demo.ts';
   import { LiveDiningService } from '../lib/planner-live.ts';
   import { PlannerModel, addDays, menuKey, type PlannerState } from '../lib/planner-model.ts';
-  import { calendarClock, restoreCalendarWeek } from '../lib/planner-view.ts';
+  import { calendarClock, formatDay, restoreCalendarWeek } from '../lib/planner-view.ts';
   import { ProbeError } from '../lib/transport.ts';
   import { ConnectionController } from '../lib/connection-state.ts';
   import type { Restaurant } from '../lib/types.ts';
@@ -44,10 +45,28 @@
   let controller = $state.raw<PlannerController>();
   let revision = $state(0);
   let accountTag: string | null = null;
+  interface ErrorNotice { id: number; title: string; message: string; context?: string; week?: string; code?: string }
+  let errors = $state<ErrorNotice[]>([]);
+  let errorSequence = 0;
+
+  function showError(title: string, failure: { message: string; code?: string }, context?: string, week?: string) {
+    errors = [...errors, { id: ++errorSequence, title, ...failure, context, week }];
+    // Public messages only: never log HTTP bodies, tokens, or the original exception.
+    console.error(`[Loghmeh] ${title}: ${failure.message}`, { code: failure.code });
+  }
+
+  function plannerError(failure: PlannerFailure) {
+    const title = { load: 'Menu could not be loaded', save: 'Changes could not be fully saved', edit: 'Could not make that change' }[failure.operation];
+    const restaurant = failure.restaurantId ? model?.restaurants.get(failure.restaurantId)?.name : undefined;
+    const week = failure.week ? `Week of ${formatDay(failure.week, 'short')}` : undefined;
+    showError(title, { message: failure.message, code: failure.code }, restaurant, week);
+  }
+
   const connectionController = new ConnectionController({
     connect: performConnection,
     openDining: () => sessionClient!.openLogin(),
     changed: () => { revision++; },
+    onError: failure => showError('Dining connection failed', failure),
   });
   const connection = $derived.by(() => { void revision; return { ...connectionController.state, opening: connectionController.opening }; });
   const connecting = $derived(connection.phase === 'checking');
@@ -95,7 +114,7 @@
     if (!selectedIds.length) selectedIds.push(isLive ? restaurants[0].id : 'kooy', ...(!isLive ? ['engineering', 'garden'] : []));
     model = new PlannerModel({ restaurants, balanceRials: service.balanceRials, selectedIds,
       activeId: preferences.activeId, drafts: isLive ? [] : preferences.drafts, menus: isLive ? [] : preferences.menus });
-    controller = new PlannerController({ model, service, onChange: changed });
+    controller = new PlannerController({ model, service, onChange: changed, onError: plannerError });
     controller.showWeek(activeWeek);
   }
 
@@ -179,7 +198,7 @@
   onMount(() => {
     if (isLive) connectionController.check();
     const timer = setInterval(refreshCalendarClock, 60_000);
-    return () => clearInterval(timer);
+    return () => { clearInterval(timer); clearTimeout(toastTimer); };
   });
 </script>
 
@@ -247,4 +266,9 @@
     <button class="danger-link" onclick={resetDemo}>Reset sample data and local drafts</button>
   </Dialog>
 {/if}
-<div class="toast" role="status" aria-live="polite" hidden={!toast}>{toast}</div>
+{#if errors.length}
+  {#key errors[0].id}
+    <ErrorBanner {...errors[0]} queued={errors.length - 1} ondismiss={() => { errors = errors.slice(1); }} />
+  {/key}
+{/if}
+<div class="toast" role="status" aria-live="polite" hidden={!toast || errors.length > 0}>{toast}</div>

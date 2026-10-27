@@ -40,7 +40,8 @@ export function restaurantStatus(model: PlannerModel, id: string, week: string):
   const changes = `${count} ${count === 1 ? 'change' : 'changes'}`;
   if (save?.state === 'error') return { text: 'Not saved', error: true, title: save.message };
   if (save?.state === 'queued' || save?.state === 'saving') return { text: save.state === 'queued' ? 'Save queued' : 'Saving…', busy: true };
-  if (loads.some(load => load.state === 'error')) return { text: 'Load failed', error: true, title: 'Retry the menu request.' };
+  const failed = loads.find(load => load.state === 'error');
+  if (failed) return { text: 'Load failed', error: true, title: failed.message || 'Retry the menu request.' };
   if (pending.length) return { text: count ? changes : '', busy: true,
     title: pending.some(load => load.state === 'loading') ? 'Loading this week’s menu' : 'This week’s menu is queued' };
   return { text: count ? changes : '' };

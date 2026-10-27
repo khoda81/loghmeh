@@ -127,7 +127,7 @@ Left/Right keys, or Shift+scroll to change weeks. Compact actions and reservatio
 states use Lucide icons with tooltips. These interactions were checked against
 fictional menus, including locked reservations and a failed menu request.
 
-There are 81 passing Bun tests and 20 passing browser parser checks. The
+There are 84 passing Bun tests and 20 passing browser parser checks. The
 write serializer and reconciliation logic are tested with fictional HTTP
 responses; one live change is verified. General refund behavior and batch
 atomicity remain unverified. See
@@ -167,6 +167,8 @@ Useful local checks:
   `expired` to that fixture to inspect connection recovery. `expired` fails on
   Refresh after a successful initial connection. In these fixtures, Open dining
   simulates the visit locally; the next check succeeds without opening a real site.
+- Add `?menu-error=1` to inspect a failed weekly menu load, its error banner,
+  and the restaurant retry state.
 - `/tests/browser-mobile.html` — 390px responsive preview.
 - `/src/probe.html` — the separate read-only development probe. The shipped
   planner's Report button provides connection diagnostics.
@@ -180,6 +182,12 @@ university service. The font's OFL license is included in the third-party notice
 Connection checks distinguish redirects from confirmed sign-in failures and
 network errors. After you explicitly open dining from Loghmeh, returning to the
 planner checks once automatically. Checks never automatically submit reservations.
+
+Failed menu loads, saves, connection attempts, and edits show the full message in
+a dismissible error banner. Its bar fills over 12–24 seconds before dismissing;
+the timer pauses while hovered, focused, behind a dialog, or in a hidden tab.
+Additional errors wait their turn. Dismissing the banner keeps the restaurant's
+error/retry state; the browser console also keeps the message and error code.
 
 Packages contain the unminified build, the MIT license, and bundled-library notices; Chrome gets a derived
 manifest. `dist/loghmeh-0.7.0-source.zip` holds the sources that addons.mozilla.org
