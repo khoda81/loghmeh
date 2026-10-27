@@ -247,7 +247,7 @@ h2 [lang=fa]{font-weight:620;color:var(--forest);font-size:.72em;letter-spacing:
     </div>
     <div class="study-grid">
       <figure class="stage">
-        <span class="art-tag" aria-hidden="true">Canvas 2D · 86 grains</span>
+        <span class="art-tag" aria-hidden="true">Canvas 2D · orbit + rice rain</span>
         <span class="art-state" aria-hidden="true"><em>Simulated</em><b class="st-name">Checking</b></span>
         <div class="art" role="img" aria-label="Saffron Orbit"></div>
         <figcaption class="cap" aria-live="polite"><span class="cap-en"></span><span class="cap-fa" lang="fa" dir="rtl"></span></figcaption>
@@ -259,13 +259,13 @@ h2 [lang=fa]{font-weight:620;color:var(--forest);font-size:.72em;letter-spacing:
           <dl>
             <dt data-s="checking"><i class="dot dot-checking"></i>Checking</dt><dd data-s="checking">1.7 s beat. Each ring surges ⅐ or ⅑ of a turn (cubic in-out over 60% of the beat), then rests. Rings are offset 220 ms and grains ripple with 0–120 ms micro-delays; orbits breathe in 4.5% per surge. Saffron leaves a trail only while it moves.</dd>
             <dt data-s="open"><i class="dot dot-open"></i>Open</dt><dd data-s="open">Grains climb into a pointed arch (طاق) over 1.0 s, staggered 0–550 ms along the path; a sage niche fills behind the bowl. One saffron thread hangs in the keystone gap and nods twice every 3.2 s. Everything else is still.</dd>
-            <dt data-s="connected"><i class="dot dot-connected"></i>Connected</dt><dd data-s="connected">Spiral pour, 850 ms per grain, staggered bottom-up across 1.0 s so the mound builds from its base. Saffron lands from 1.2 s, the bowl gives once (3%), a copper ring seals at 1.85 s, steam drifts.</dd>
+            <dt data-s="connected"><i class="dot dot-connected"></i>Connected</dt><dd data-s="connected">The orbit spirals inward over 1.85 s while a short rain of rice fills the bowl from edge to edge. The mound builds under the falling grains; saffron lands last from 2.55 s. A copper ring seals at 2.9 s, then steam drifts.</dd>
             <dt data-s="failed"><i class="dot dot-failed"></i>Cannot reach</dt><dd data-s="failed">Grains accelerate downward and settle without bouncing (1.15 s, 0–300 ms random delays) and lie on the table; the outer orbit is drawn broken. Nothing moves after ~1.5 s.</dd>
           </dl>
         </div>
         <div class="score-wrap"><p class="label">Score <span>first 5 s of the selected state</span></p><div class="score"></div></div>
         <div class="build">
-          <p><b>Build</b>Canvas 2D. 86 seeded grains (44 in the card), one path each; only the 8 saffron threads sample 9 past poses for trails. Deterministic, so every replay is identical.</p>
+          <p><b>Build</b>Canvas 2D. 86 orbit grains plus 190 falling grains (44 + 64 in the card), with a growing rice bed beneath them; only the 8 saffron threads sample 9 past poses for trails. Deterministic, so every replay is identical.</p>
           <p><b>Tradeoffs</b>Most cinematic and food-forward; reads as “grains” even at 200 px. Pixel-drawn, so meaning lives in the caption. rAF stops when paused, off-screen or reduced.</p>
         </div>
         <div>
@@ -501,12 +501,24 @@ class OrbitStudy extends CanvasStudy{
     const ap=this.P.filter(p=>p!==this.key).map(p=>[p,this.orbitPose(p,0).x]).sort((a,b)=>a[1]-b[1]);
     ap.forEach(([p],j)=>{p.archS=j/(ap.length-1);p.archPt=this.archAt(p.archS);});
     const rice=this.P.filter(p=>p.type!=='saffron');this.nRice=rice.length;
-    const spots=rice.map(()=>{const u=r()*2-1,v=r();return{x:300+u*54,y:this.b.y-2-Math.sqrt(1-u*u)*33*Math.sqrt(v),rot:r()*TAU};}).sort((a,b)=>b.y-a.y);
+    const spots=rice.map(()=>{const u=r()*2-1,v=r();return{x:300+u*74,y:this.b.y-2-Math.sqrt(1-u*u)*42*Math.sqrt(v),rot:r()*TAU};}).sort((a,b)=>b.y-a.y);
     rice.forEach((p,j)=>{p.mound=spots[j];p.rank=j;});
     const ns=this.saff.length;
-    this.saff.forEach((p,j)=>{const u=(ns>1?j/(ns-1):.5)*1.4-.7+(r()-.5)*.12;p.mound={x:300+u*54,y:this.b.y-3-Math.sqrt(Math.max(0,1-u*u))*33,rot:(r()-.5)*1.2};});
+    this.saff.forEach((p,j)=>{const u=(ns>1?j/(ns-1):.5)*1.4-.7+(r()-.5)*.12;p.mound={x:300+u*74,y:this.b.y-3-Math.sqrt(Math.max(0,1-u*u))*42,rot:(r()-.5)*1.2};});
     for(const p of this.P){const s=r()<.5?-1:1,d=18+Math.pow(r(),1.25)*185;p.tab={x:300+s*d,y:this.table-(p.type==='saffron'?1.6:p.wid*.5*this.gs)-.4,rot:(r()-.5)*.5+(r()<.5?0:Math.PI)};}
-    this.dec={guide:0,niche:0,broken:0,steam:0};this.decFrom={...this.dec};
+    // These grains join only after a confirmed connection; the checking orbit
+    // never fills the bowl or suggests progress.
+    const rainRandom=rng(211),rainCount=m?64:190;
+    this.rain=Array.from({length:rainCount},(_,i)=>{
+      const u=rainRandom()*2-1,v=rainRandom(),x=300+u*74;
+      const mound={x,y:this.b.y+Math.sqrt(1-u*u)*(12-54*v),rot:rainRandom()*TAU};
+      const start={x:x+(rainRandom()-.5)*34,y:58+rainRandom()*35,rot:rainRandom()*TAU,sc:1,a:0,layer:2};
+      const side=rainRandom()<.5?-1:1;
+      return {i,type:i%13===0?'gold':'rice',len:8+rainRandom()*2,wid:3+rainRandom()*.7,
+        mound,start,tab:{x:300+side*(25+rainRandom()*173),y:this.table-2,rot:(rainRandom()-.5)*.3},
+        ...start,from:{...start},delay:.5+i/rainCount*1.5,duration:.65+rainRandom()*.2};
+    });
+    this.dec={guide:0,niche:0,broken:0,steam:0,fill:0};this.decFrom={...this.dec};
   }
   buildArch(){
     const a=112,base=200,foot=346,R=168,cxL=300-a+R,al=Math.acos((R-a)/R),left=[];
@@ -547,7 +559,7 @@ class OrbitStudy extends CanvasStudy{
   trans(st,p){
     if(st==='checking')return[p.ring*.12+p.i*.0035,1.25];
     if(st==='open')return p===this.key?[.8,1]:[p.archS*.55,1];
-    if(st==='connected')return p.type==='saffron'?[1.2+p.sj*.07,.85]:[p.rank/this.nRice,.85];
+    if(st==='connected')return p.type==='saffron'?[2.55+p.sj*.06,.7]:[p.rank/this.nRice,.85];
     return[p.r1*.3,1.15];
   }
   origin(st,p){
@@ -556,7 +568,8 @@ class OrbitStudy extends CanvasStudy{
   }
   capture(st,replay){
     for(const p of this.P)p.from=replay?this.origin(st,p):{x:p.x,y:p.y,rot:p.rot,sc:p.sc,a:p.a,layer:p.layer};
-    this.decFrom=replay?{guide:0,niche:0,broken:0,steam:0}:{...this.dec};
+    for(const p of this.rain)p.from=replay?{...p.start}:{x:p.x,y:p.y,rot:p.rot,sc:p.sc,a:p.a,layer:p.layer};
+    this.decFrom=replay?{guide:0,niche:0,broken:0,steam:0,fill:0}:{...this.dec};
   }
   blend(st,p,f,to,k){
     const o={sc:lerp(f.sc,to.sc,k),a:lerp(f.a,to.a,Math.min(1,k*1.6)),layer:k<.5?f.layer:to.layer};
@@ -580,18 +593,30 @@ class OrbitStudy extends CanvasStudy{
       const v=k<1?this.blend(st,p,p.from,to,k):to;
       p.x=v.x;p.y=v.y;p.rot=v.rot;p.sc=v.sc;p.a=v.a;p.layer=v.layer;p.k=k;
     }
+    for(const p of this.rain){
+      const f=p.from;
+      if(st==='connected'){
+        const k=clamp((t-p.delay)/p.duration),start=f.a>.01?f:p.start;
+        p.x=lerp(start.x,p.mound.x,E.sine(k));p.y=lerp(start.y,p.mound.y,k*k);
+        p.rot=lerpAng(start.rot,p.mound.rot,k);p.a=lerp(start.a,1,clamp(k*5));p.layer=k<.96?2:1;
+      }else if(st==='failed'){
+        const k=clamp(t/.95);p.x=lerp(f.x,p.tab.x,E.out(k));p.y=lerp(f.y,p.tab.y,k*k);
+        p.rot=lerpAng(f.rot,p.tab.rot,E.out(k));p.a=f.a;p.layer=2;
+      }else{p.a=f.a*(1-clamp(t/.35));}
+    }
     const f=this.decFrom,out=clamp(t/.45),dv=(n,on,val)=>on?Math.max(val,f[n]*(1-out)):f[n]*(1-out);
     this.dec={guide:dv('guide',st==='checking',clamp((t-.3)/.8)),niche:dv('niche',st==='open',clamp((t-.95)/.7)),
-      broken:dv('broken',st==='failed',clamp((t-1.05)/.5)),steam:dv('steam',st==='connected',clamp((t-1.9)/1.1))};
+      broken:dv('broken',st==='failed',clamp((t-1.05)/.5)),steam:dv('steam',st==='connected',clamp((t-2.8)/1.1)),
+      fill:dv('fill',st==='connected',E.sine(clamp((t-1.1)/1.65)))};
   }
-  staticTime(){return{checking:3.32,open:6.3,connected:4.2,failed:3}[this.state];}
+  staticTime(){return{checking:3.32,open:6.3,connected:4.8,failed:3}[this.state];}
   draw(){
     if(!this.W)return;const ctx=this.begin(),gs=this.gs;
     ctx.fillStyle='rgba(38,58,46,.07)';ctx.beginPath();ctx.ellipse(300,this.table-2,96,7,0,0,TAU);ctx.fill();
     ctx.strokeStyle='rgba(38,58,46,.15)';ctx.lineWidth=gs*.9;ctx.beginPath();ctx.moveTo(92,this.table);ctx.lineTo(508,this.table);ctx.stroke();
     this.seal(ctx);
     if(this.dec.niche>.001)this.niche(ctx,this.dec.niche);
-    this.layer(ctx,0);this.bowlBack(ctx);this.layer(ctx,1);this.bowlFront(ctx);
+    this.layer(ctx,0);this.bowlBack(ctx);this.riceBed(ctx);this.layer(ctx,1);this.bowlFront(ctx);
     // Draw orbit ink above the bowl, then the foreground grains above the ink.
     this.guides(ctx,true);this.guides(ctx,false);
     if(this.dec.broken>.001)this.broken(ctx,this.dec.broken);
@@ -619,7 +644,15 @@ class OrbitStudy extends CanvasStudy{
     for(const th of[.42,TAU-.3]){const q=this.ringPt(r,th);ctx.beginPath();ctx.arc(q.x,q.y,this.mini?4:2.6,0,TAU);ctx.fill();}
     ctx.restore();
   }
+  riceBed(ctx){
+    const amount=this.dec.fill;if(amount<=.001)return;
+    const b=this.b,rx=78*Math.sqrt(amount),height=44*amount;
+    ctx.save();this.bowlXf(ctx);ctx.fillStyle='#f5eddb';
+    ctx.beginPath();ctx.ellipse(b.x,b.y,rx,height,0,Math.PI,TAU);
+    ctx.ellipse(b.x,b.y,rx,14,0,0,Math.PI);ctx.closePath();ctx.fill();ctx.restore();
+  }
   layer(ctx,L){
+    for(const p of this.rain)if(p.layer===L)this.grain(ctx,p);
     for(const p of this.P)if(p.layer===L&&p.type!=='saffron')this.grain(ctx,p);
     for(const p of this.saff)if(p.layer===L)this.grain(ctx,p);
   }
@@ -671,7 +704,7 @@ class OrbitStudy extends CanvasStudy{
   steam(ctx,a){
     const t=this.t,T=this.T,con=this.state==='connected';ctx.save();ctx.lineCap='round';ctx.lineWidth=this.mini?3.4:1.8;
     for(let w=0;w<3;w++){
-      const g=con?clamp((t-1.9-w*.2)/1.1):1;if(g<=0)continue;
+      const g=con?clamp((t-2.8-w*.2)/1.1):1;if(g<=0)continue;
       const x0=300+(w-1)*18,y0=this.b.y-44,H=(this.mini?64:80)*E.out(g);
       const grd=ctx.createLinearGradient(0,y0,0,y0-H);grd.addColorStop(0,'rgba(49,91,70,0)');grd.addColorStop(.3,`rgba(49,91,70,${.38*a})`);grd.addColorStop(1,'rgba(49,91,70,0)');
       ctx.strokeStyle=grd;ctx.beginPath();
@@ -682,7 +715,7 @@ class OrbitStudy extends CanvasStudy{
   }
   seal(ctx){
     if(this.state!=='connected')return;
-    for(const off of[0,.16]){const q=clamp((this.t-1.85-off)/1.25);if(q<=0||q>=1)continue;const rx=84+E.out(q)*150;
+    for(const off of[0,.16]){const q=clamp((this.t-2.9-off)/1.25);if(q<=0||q>=1)continue;const rx=84+E.out(q)*150;
       ctx.save();ctx.strokeStyle=`rgba(170,120,72,${.55*(1-q)})`;ctx.lineWidth=this.mini?2.6:1.4;ctx.beginPath();ctx.ellipse(300,this.table-1,rx,rx*.12,0,0,TAU);ctx.stroke();ctx.restore();}
   }
   knock(ctx){
@@ -1056,7 +1089,7 @@ const SCORE={
   orbit:{
     checking:[['bloom out of the bowl',0,1.8],['surge + breathe · 1.7 s beat',0,5,'loop']],
     open:[['climb into the arch',0,1.55],['niche fills',.95,1.65],['keystone nods ×2 / 3.2 s',1.5,5,'loop']],
-    connected:[['spiral pour',0,1.85],['bowl gives',.95,1.45],['saffron lands',1.2,2.6],['copper seal',1.85,3.26],['steam',1.9,5,'loop']],
+    connected:[['spiral pour',0,1.85],['rice rain',.5,2.85],['mound fills',1.1,2.75],['saffron lands',2.55,3.67],['copper seal',2.9,4.31],['steam',2.8,5,'loop']],
     failed:[['fall + settle',0,1.45],['orbit breaks',1.05,1.55],['still',1.55,5,'hold']]
   },
   loom:{
