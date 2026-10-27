@@ -72,7 +72,9 @@
   function changed() {
     if (!model || !controller) return;
     if (live) {
-      const expired = [...model.loads.values(), ...model.saves.values()].find(state => EXPIRED.includes(state.code ?? ''));
+      const failures = [...model.loads.values(), ...model.saves.values()];
+      const expired = failures.find(state => EXPIRED.includes(state.code ?? ''))
+        ?? (!live.sessionVerified ? failures.find(state => state.state === 'error') : undefined);
       if (expired) {
         live.writable = false;
         connectionController.invalidate(expired.code, expired.message ?? 'The dining session needs to be checked again.');

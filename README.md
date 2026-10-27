@@ -124,7 +124,7 @@ Left/Right keys, or Shift+scroll to change weeks. Compact actions and reservatio
 states use Lucide icons with tooltips. These interactions were checked against
 fictional menus, including locked reservations and a failed menu request.
 
-There are 77 passing Bun tests and 20 passing browser parser checks. The
+There are 78 passing Bun tests and 20 passing browser parser checks. The
 write serializer and reconciliation logic are tested with fictional HTTP
 responses; one live change is verified. General refund behavior and batch
 atomicity remain unverified. See

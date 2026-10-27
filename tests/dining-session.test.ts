@@ -328,3 +328,16 @@ test('a failed reconnect invalidates prior verification and reports only safe re
   });
   assert.equal(JSON.stringify(report).includes('private-'), false);
 });
+
+test('failed background recovery cannot retain a prior verified session or permission to save', async () => {
+  let connects = 0;
+  const service = new LiveDiningService({ runtime: { async sendMessage(message) {
+    if (message.operation === 'connect' && ++connects === 1) return { ok: true, value: { token: 'old-context', accountTag: 'same', writable: true, restaurants: [{ id: '10:20' }] } };
+    return { ok: false, error: { code: message.operation === 'connect' ? 'network-error' : 'reconnect-required', message: 'Connection could not be verified.' } };
+  } } });
+  await service.connect();
+  await assert.rejects(service.readMenu('10:20', next), { code: 'network-error' });
+  assert.equal(service.connectionReport().sessionVerified, false);
+  assert.equal(service.writable, false);
+  assert.equal(typeof service.sessionCheckedAt, 'number');
+});

@@ -91,6 +91,8 @@ export class LiveDiningService implements PlannerService {
 
   async recoverContext(restaurantId: string) {
     if (!this.recovery) {
+      this.sessionVerified = false;
+      this.writable = false;
       this.recovery = (async () => {
         const connection = await this.request('connect', {}, true);
         if (connection.accountTag !== this.accountTag) {
@@ -99,8 +101,7 @@ export class LiveDiningService implements PlannerService {
         }
         Object.assign(this, connection);
         this.sessionVerified = true;
-        this.sessionCheckedAt = Date.now();
-      })().finally(() => { this.recovery = null; });
+      })().finally(() => { this.sessionCheckedAt = Date.now(); this.recovery = null; });
     }
     await this.recovery;
     if (!this.restaurants.some(restaurant => restaurant.id === restaurantId)) {
