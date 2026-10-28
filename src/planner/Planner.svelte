@@ -71,6 +71,8 @@
   });
   const connection = $derived.by(() => { void revision; return { ...connectionController.state, opening: connectionController.opening }; });
   const connecting = $derived(connection.phase === 'checking');
+  let connectionAcknowledged = $state(false);
+  $effect(() => { if (connection.phase !== 'connected') connectionAcknowledged = false; });
   const liveLabel = $derived(connecting ? 'Checking dining connection' : connection.phase === 'connected' ? 'Dining connected · Refresh' : 'Check dining connection');
   let toast = $state('');
   let toastTimer: ReturnType<typeof setTimeout>;
@@ -231,9 +233,10 @@
   </div>
 </header>
 
-{#if live && connection.phase !== 'connected'}
+{#if live && (connection.phase !== 'connected' || !connectionAcknowledged)}
   <ConnectionPanel state={connection} compact={Boolean(model)} opening={connection.opening} logo={pageUrl('icon.svg')}
-    oncheck={connectDining} onopen={() => connectionController.openDining()} onreport={openReport} />
+    oncheck={connectDining} onopen={() => connectionController.openDining()} onreport={openReport}
+    onsettled={() => { if (connection.phase === 'connected') connectionAcknowledged = true; }} />
 {/if}
 
 {#if model && controller}

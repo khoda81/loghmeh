@@ -127,7 +127,7 @@ Left/Right keys, or Shift+scroll to change weeks. Compact actions and reservatio
 states use Lucide icons with tooltips. These interactions were checked against
 fictional menus, including locked reservations and a failed menu request.
 
-There are 94 passing Bun tests and 20 passing browser parser checks. The
+There are 100 passing Bun tests and 20 passing browser parser checks. The
 write serializer and reconciliation logic are tested with fictional HTTP
 responses; one live change is verified. General refund behavior and batch
 atomicity remain unverified. See
@@ -185,6 +185,15 @@ university service. The font's OFL license is included in the third-party notice
 Connection checks distinguish redirects from confirmed sign-in failures and
 network errors. After you explicitly open dining from Loghmeh, returning to the
 planner checks once automatically. Checks never automatically submit reservations.
+
+The connection card uses the local Saffron Orbit motion study: grains orbit
+while checking, form an arch when user action is needed, and settle beside an
+empty bowl after a failure. A verified session pours rice into the bowl; the
+planner is usable during this brief confirmation. Limited access keeps its
+explanation visible. Pause freezes the illustration, reduced motion uses
+composed stills, and hidden or offscreen drawings stop rendering. Waiting and
+failure states settle without continuous loops. No animation performs a
+connection check or changes a reservation.
 
 Failed menu loads, saves, connection attempts, and edits show the full message in
 a dismissible error banner. Its bar fills over 12–24 seconds before dismissing;

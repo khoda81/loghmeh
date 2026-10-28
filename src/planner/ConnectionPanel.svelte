@@ -1,11 +1,12 @@
 <script lang="ts">
-  import { ArrowUpRight, RefreshCw, WifiOff, ShieldCheck } from '@lucide/svelte';
+  import { ArrowUpRight, RefreshCw, ShieldCheck, X } from '@lucide/svelte';
+  import ConnectionMotion from './ConnectionMotion.svelte';
   import Steam from './Steam.svelte';
   import type { ConnectionState } from '../lib/connection-state.ts';
 
-  let { state, compact, opening, logo, oncheck, onopen, onreport }: {
+  let { state, compact, opening, logo, oncheck, onopen, onreport, onsettled }: {
     state: ConnectionState; compact: boolean; opening: boolean; logo: string;
-    oncheck(): void; onopen(): void; onreport(): void;
+    oncheck(): void; onopen(): void; onreport(): void; onsettled(): void;
   } = $props();
 
   const titles: Record<ConnectionState['phase'], string> = {
@@ -21,8 +22,10 @@
     redirect: 'Dining redirected our check, so we couldn’t verify your session. You may already be signed in — opening dining in this browser may be enough.',
     login: 'Dining returned a sign-in response. Complete sign-in in the university’s own tab, then return here.',
     permission: 'Loghmeh needs browser access to dining2.ut.ac.ir to use your existing session. Choose Allow dining access to continue.',
+    connected: 'Your dining session is verified. Your planner is ready below.',
   };
   const busy = $derived(state.phase === 'checking');
+  const connected = $derived(state.phase === 'connected');
   const visitFirst = $derived(['redirect', 'login', 'waiting'].includes(state.phase));
   const checkLabel = $derived(busy ? 'Checking…' : state.phase === 'permission' ? 'Allow dining access' : 'Check connection again');
   const checkedTime = $derived(state.checkedAt === null ? '' : new Intl.DateTimeFormat('en-GB', {
@@ -31,17 +34,18 @@
 </script>
 
 <section class:compact class="connection-screen" aria-labelledby="connection-title" aria-busy={busy}>
-  <div class="connection-card">
-    <div class="connection-symbol" aria-hidden="true">
-      <img src={logo} width="52" height="52" alt="">
-      <span>{#if busy}<Steam size={15} />{:else if state.phase === 'network'}<WifiOff size={15} />{:else if state.phase === 'read-only'}<ShieldCheck size={15} />{:else}<ArrowUpRight size={15} />{/if}</span>
+  <div class="connection-card" class:connected>
+    <div class="connection-art">
+      <ConnectionMotion phase={state.phase} {compact} {logo} {onsettled} />
     </div>
+    {#if connected}<button class="connection-dismiss" aria-label="Dismiss connection confirmation" title="Dismiss confirmation" onclick={onsettled}><X size={16} aria-hidden="true" /></button>{/if}
     <div class="connection-copy" role="status" aria-live="polite" aria-atomic="true">
-      <p class="connection-eyebrow">UNIVERSITY DINING</p>
+      <p class="connection-eyebrow">UNIVERSITY DINING {#if state.phase === 'read-only'}<ShieldCheck size={13} aria-hidden="true" />{/if}</p>
       <h1 id="connection-title">{titles[state.phase]}</h1>
       <p class="connection-description">{busy && compact ? 'Checking access and refreshing your eligible restaurants. Your existing planner stays below.' : descriptions[state.phase] ?? state.message}</p>
-      {#if compact}<p class="connection-preserved">Previously loaded menus may be out of date. Your pending choices stay in this tab.</p>{/if}
+      {#if compact && !connected}<p class="connection-preserved">Previously loaded menus may be out of date. Your pending choices stay in this tab.</p>{/if}
     </div>
+    {#if !connected}
     <div class="connection-actions">
       {#if visitFirst && state.phase !== 'waiting'}
         <button class="connection-primary" disabled={busy || opening} onclick={onopen}>Open dining website <ArrowUpRight size={16} aria-hidden="true" /></button>
@@ -58,16 +62,17 @@
       <p>Your password stays with the university.</p>
       <div><span>{busy ? 'Checking now' : checkedTime ? `Last checked ${checkedTime} · Tehran` : 'Waiting for your return'}</span><button onclick={onreport}>Connection details</button></div>
     </div>
+    {/if}
   </div>
 </section>
 
 <style>
   .connection-screen { min-height: calc(100dvh - 52px); display: grid; place-items: center; padding: 48px 24px 96px; }
-  .connection-card { width: min(100%, 530px); padding: 38px; border: 1px solid var(--line); border-radius: 18px; background: var(--surface); box-shadow: 0 18px 70px #263a2e06; }
-  .connection-symbol { position: relative; width: 60px; margin-bottom: 28px; }
-  .connection-symbol img { display: block; }
-  .connection-symbol > span { position: absolute; bottom: -5px; right: -2px; display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: #e7ecdf; border: 3px solid var(--surface); color: var(--green); }
-  .connection-eyebrow { margin: 0 0 8px; color: #64725f; font-size: 10px; font-weight: 600; letter-spacing: 1.5px; }
+  .connection-card { position: relative; width: min(100%, 530px); padding: 30px 38px 38px; border: 1px solid var(--line); border-radius: 18px; background: var(--surface); box-shadow: 0 18px 70px #263a2e06; }
+  .connection-art { margin-bottom: 26px; }
+  .connection-dismiss { position: absolute; top: 9px; right: 9px; display: grid; place-items: center; width: 30px; height: 30px; padding: 0; border: 0; border-radius: 6px; background: transparent; color: #64725f; }
+  .connection-dismiss:hover { background: var(--paper); }
+  .connection-eyebrow { display: flex; align-items: center; gap: 8px; margin: 0 0 8px; color: #64725f; font-size: 10px; font-weight: 600; letter-spacing: 1.5px; }
   h1 { margin: 0; font-size: clamp(23px, 3vw, 28px); line-height: 1.45; font-weight: 600; letter-spacing: -.65px; }
   .connection-description { margin: 13px 0 0; color: #586553; font-size: 13px; line-height: 1.9; }
   .connection-preserved { margin: 12px 0 0; font-size: 12px; line-height: 1.8; color: #695b3b; }
@@ -81,16 +86,25 @@
   .connection-footer > div { display: flex; gap: 12px; flex-wrap: wrap; justify-content: space-between; align-items: center; }
   .connection-footer button { background: transparent; border: 0; padding: 4px 0; color: #435d47; font: inherit; text-decoration: underline; text-underline-offset: 3px; }
   .compact { min-height: 0; padding: 20px var(--page-gutter); }
-  .compact .connection-card { width: 100%; max-width: 900px; padding: 24px; }
-  .compact .connection-symbol { display: none; }
+  .compact .connection-card { display: grid; grid-template-columns: 144px minmax(0, 1fr); grid-template-areas: 'art copy' 'art actions' 'footer footer'; column-gap: 24px; width: 100%; max-width: 900px; padding: 24px; }
+  .compact .connection-art { grid-area: art; align-self: center; margin: 0; }
+  .compact .connection-copy { grid-area: copy; }
+  .compact .connection-actions { grid-area: actions; }
+  .compact .connection-footer { grid-area: footer; }
+  .compact .connected { grid-template-areas: 'art copy'; align-items: center; }
   .compact h1 { font-size: 21px; }
   .compact .connection-actions { margin-top: 16px; }
   .compact .connection-footer { margin-top: 18px; padding-top: 12px; }
   @media (max-width: 500px) {
     .connection-screen { padding: 30px 18px; align-items: start; }
     .connection-card { padding: 26px 22px; }
+    .connection-art { margin-bottom: 22px; }
     .connection-actions { align-items: stretch; flex-direction: column; gap: 6px; }
     .connection-footer { font-size: 11px; }
     .compact { padding: 14px var(--page-gutter); }
+    .compact .connection-card { grid-template-columns: minmax(0, 1fr); grid-template-areas: 'art' 'copy' 'actions' 'footer'; row-gap: 16px; padding: 22px; }
+    .compact .connection-art { width: 144px; justify-self: center; }
+    .compact .connected { grid-template-areas: 'art' 'copy'; }
+    .compact .connection-actions, .compact .connection-footer { margin-top: 0; }
   }
 </style>
