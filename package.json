@@ -1,6 +1,6 @@
 {
   "name": "loghmeh",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "private": true,
   "type": "module",
   "description": "An independent Firefox and Chrome extension for planning University of Tehran dining reservations with your existing browser login.",

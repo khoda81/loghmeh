@@ -16,12 +16,18 @@ re-render them if the SVG changes).
 ## Cutting a release
 
 1. Bump `version` in `src/manifest.json` and `package.json` (CI checks they match).
-2. Commit with jj and push the `main` bookmark, then tag and push the release:
+2. Run `bun test`, `bun run check`, `bun run package`, and
+   `bunx --bun web-ext@10.7.0 lint --source-dir dist/firefox --warnings-as-errors`.
+   Commit with jj, then move `main` and create the matching tag on the release commit:
 
    ```sh
-   jj tag set v0.7.0 -r main
-   jj git push --tag v0.7.0 --dry-run
-   jj git push --tag v0.7.0
+   jj describe -m "Release Loghmeh 0.8.0"
+   jj bookmark set main -r @
+   jj tag set v0.8.0 -r main
+   jj git push --remote origin --bookmark main --tag v0.8.0 --dry-run
+   jj git push --remote origin --bookmark main --tag v0.8.0
+   git ls-remote origin refs/heads/main refs/tags/v0.8.0
+   jj new
    ```
 3. `.github/workflows/release.yml` tests, packages, and creates the GitHub release
    with the Firefox, Chrome, and source ZIPs attached. Mozilla's validator must
@@ -50,15 +56,16 @@ with the store variables still disabled, then configure credentials and enable
 the store for future tags. This avoids uploading the same version twice.
 
 Mozilla's metadata and private reviewer instructions live in
-`store/amo-metadata.json`. They describe the fictional sample mode and the
+`store/amo-metadata.json`. They describe the local development preview and the
 university-account requirement; never put university login credentials there.
+Sample menus and simulation controls are excluded from the shipped extension.
 The public privacy policy is [PRIVACY.md](../PRIVACY.md).
 
 To retry just one store after correcting a credential or another transient
 failure, dispatch the workflow at the **existing version tag**, for example:
 
 ```sh
-gh workflow run release.yml --repo khoda81/loghmeh --ref v0.7.0 -f store=firefox
+gh workflow run release.yml --repo khoda81/loghmeh --ref v0.8.0 -f store=firefox
 ```
 
 Use `store=chrome` for Chrome or `store=both` for both. The workflow checks the

@@ -5,7 +5,7 @@ restaurants as colors, preview foods inside a weekly calendar, and keep your
 choices when the server rejects a request.
 
 Independent, unofficial extension for Firefox / Zen 142+ and Chrome / Chromium 116+.
-**Version 0.7.0 · MIT.** Packages are attached to each
+**Version 0.8.0 · MIT.** Packages are attached to each
 [GitHub release](https://github.com/khoda81/loghmeh/releases).
 
 ![Development preview of the weekly planner with fictional menus and pending balance changes](docs/assets/planner-preview.png)
@@ -127,6 +127,13 @@ Left/Right keys, or Shift+scroll to change weeks. Compact actions and reservatio
 states use Lucide icons with tooltips. These interactions were checked against
 fictional menus, including locked reservations and a failed menu request.
 
+Version 0.8.0 connects the welcome illustration to the persistent app header,
+adds explicit connection recovery and read-only checks for uncertain saves,
+and bundles Estedad for offline typography. The motion handoff, compact recovery
+states, pause control, and mobile layout were checked in the browser with fictional
+responses. Reduced motion and interrupted transitions are covered by automated
+tests. [Motion verification notes](docs/verification/motion-2026-10-29.md).
+
 There are 104 passing Bun tests and 20 passing browser parser checks. The
 write serializer and reconciliation logic are tested with fictional HTTP
 responses; one live change is verified. General refund behavior and batch
@@ -176,8 +183,8 @@ Useful local checks:
 - `/src/probe.html` — the separate read-only development probe. The shipped
   planner's Report button provides connection diagnostics.
 
-`bun run package` builds `dist/loghmeh-0.7.0-firefox.zip` and
-`dist/loghmeh-0.7.0-chrome.zip`, plus unpacked `dist/firefox/` and `dist/chrome/`.
+`bun run package` builds `dist/loghmeh-0.8.0-firefox.zip` and
+`dist/loghmeh-0.8.0-chrome.zip`, plus unpacked `dist/firefox/` and `dist/chrome/`.
 Estedad is bundled locally for Persian and Latin text, including its variable weights.
 Typography needs no public internet access; live dining only needs access to the
 university service. The font's OFL license is included in the third-party notices.
@@ -214,7 +221,7 @@ fresh read identifies unapplied changes, a separate explicit submission can
 send the remaining draft.
 
 Packages contain the unminified build, the MIT license, and bundled-library notices; Chrome gets a derived
-manifest. `dist/loghmeh-0.7.0-source.zip` holds the sources that addons.mozilla.org
+manifest. `dist/loghmeh-0.8.0-source.zip` holds the sources that addons.mozilla.org
 reviews alongside a bundled add-on. Releases are cut from version tags: see [releasing](docs/releasing.md). Captures, outputs, private checks,
 and local credentials are ignored and excluded.
 
