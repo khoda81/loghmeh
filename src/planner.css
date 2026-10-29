@@ -12,11 +12,15 @@ a { color: var(--green); text-decoration: none; }
 a:hover { text-decoration: underline; }
 [hidden] { display: none !important; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-.app-shell { position: relative; flex-shrink: 0; z-index: 10; background: var(--paper); border-bottom: 1px solid var(--line); padding: 0 var(--page-gutter); }
+.app-shell { position: sticky; top: 0; flex-shrink: 0; z-index: 30; background: var(--paper); border-bottom: 1px solid var(--line); padding: 0 var(--page-gutter); }
 .topbar { display: flex; justify-content: space-between; align-items: center; height: 50px; border-bottom: 1px solid var(--line); }
 .brand { display: inline-flex; align-items: center; gap: 9px; color: var(--ink); font-size: 21px; font-weight: 750; letter-spacing: -.8px; }
 .brand span[lang] { font-size: 17px; font-weight: 500; color: var(--muted); margin-left: 6px; }
 .brand:hover { text-decoration: none; }
+.brand-mark { width: 42px; height: 36px; display: grid; place-items: center; flex-shrink: 0; }
+.brand-mark img { opacity: .3; transition: opacity .2s; }
+.brand-mark img.arrived { opacity: 0; }
+@media (prefers-reduced-motion: reduce) { .topbar-actions .motion-toggle { display: none; } .brand-mark img { transition: none; } }
 .topbar-actions { display: flex; align-items: center; gap: 8px; font-size: 12px; }
 .topbar-actions > a { color: var(--muted); }
 .topbar-actions > a, .topbar-actions > button { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; padding: 0; border-radius: 6px; }
@@ -24,7 +28,7 @@ a:hover { text-decoration: underline; }
 .demo-label { display: flex; align-items: center; gap: 7px; border: 0; background: transparent; padding: 8px 0 8px 8px; font-size: 12px; color: #81754d; }
 .live-label { padding: 8px 0; border: 0; background: transparent; color: var(--green); font-size: 11px; }
 .report-json { width: 100%; min-height: 320px; resize: vertical; border: 1px solid var(--line); border-radius: 6px; padding: 12px; background: var(--paper); color: var(--ink); font: 11px/1.6 monospace; }
-.budget-header { position: sticky; top: 0; z-index: 20; background: var(--paper); border-bottom: 1px solid var(--line); padding: 0 var(--page-gutter); }
+.budget-header { position: sticky; top: 51px; z-index: 20; background: var(--paper); border-bottom: 1px solid var(--line); padding: 0 var(--page-gutter); }
 .wallet { padding-top: 12px; }
 .wallet-top { display: flex; align-items: center; gap: 25px; }
 .wallet-amount { display: flex; align-items: baseline; gap: 8px; }
@@ -193,5 +197,10 @@ dialog::backdrop { background: #263a2e4d; backdrop-filter: blur(2px); }
   .week-scroll { overflow-x: auto; overflow-y: hidden; border-right: 1px solid var(--line); }
   .meal-heading { position: sticky; left: 0; z-index: 1; background: var(--paper); }
   .food-name { font-size: 12px; }
+}
+@media (max-width: 500px) {
+  .brand { gap: 6px; white-space: nowrap; }
+  .brand-mark { width: 36px; }
+  .topbar-actions { gap: 2px; }
 }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; animation: none !important; transition: none !important; } }

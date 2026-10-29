@@ -1,8 +1,9 @@
 <script lang="ts">
-  import { Activity, FileText, RefreshCw, FlaskConical, BookOpen, Plug } from '@lucide/svelte';
-  import { onMount } from 'svelte';
+  import { Activity, FileText, RefreshCw, FlaskConical, BookOpen, Plug, Pause, Play } from '@lucide/svelte';
+  import { onMount, tick } from 'svelte';
   import Dialog from './Dialog.svelte';
   import ConnectionPanel from './ConnectionPanel.svelte';
+  import ConnectionMotion from './ConnectionMotion.svelte';
   import ErrorBanner from './ErrorBanner.svelte';
   import Steam from './Steam.svelte';
   import Palette from './Palette.svelte';
@@ -17,6 +18,7 @@
   import { calendarClock, formatDay, restoreCalendarWeek } from '../lib/planner-view.ts';
   import { ProbeError } from '../lib/transport.ts';
   import { ConnectionController } from '../lib/connection-state.ts';
+  import { revealPlanner } from '../lib/connection-handoff.ts';
   import type { Restaurant } from '../lib/types.ts';
 
   const api = globalThis.browser ?? globalThis.chrome;
@@ -45,11 +47,11 @@
   let controller = $state.raw<PlannerController>();
   let revision = $state(0);
   let accountTag: string | null = null;
-  interface ErrorNotice { id: number; title: string; message: string; context?: string; week?: string; code?: string; restaurantId?: string }
+  interface ErrorNotice { id: number; title: string; message: string; context?: string; week?: string; code?: string; restaurantId?: string; source?: 'connection' }
   let errors = $state<ErrorNotice[]>([]);
   let errorSequence = 0;
 
-  function showError(title: string, failure: { message: string; code?: string }, context?: string, week?: string, restaurantId?: string) {
+  function showError(title: string, failure: { message: string; code?: string; source?: 'connection' }, context?: string, week?: string, restaurantId?: string) {
     errors = [...errors, { id: ++errorSequence, title, ...failure, context, week, restaurantId }];
     // Public messages only: never log HTTP bodies, tokens, or the original exception.
     console.error(`[Loghmeh] ${title}: ${failure.message}`, { code: failure.code });
@@ -66,13 +68,21 @@
   const connectionController = new ConnectionController({
     connect: performConnection,
     openDining: () => sessionClient!.openLogin(),
-    changed: () => { revision++; },
-    onError: failure => showError('Dining connection failed', failure),
+    changed: () => {
+      revision++;
+      if (['connected', 'read-only'].includes(connectionController.state.phase)) errors = errors.filter(error => error.source !== 'connection');
+    },
+    onError: failure => showError('Dining connection failed', { ...failure, source: 'connection' }),
   });
   const connection = $derived.by(() => { void revision; return { ...connectionController.state, opening: connectionController.opening }; });
   const connecting = $derived(connection.phase === 'checking');
-  let connectionAcknowledged = $state(false);
-  $effect(() => { if (connection.phase !== 'connected') connectionAcknowledged = false; });
+  let plannerEntered = $state(!isLive);
+  let motionPaused = $state(false);
+  let welcomeArt = $state<HTMLDivElement>();
+  let brandMark = $state<HTMLSpanElement>();
+  $effect(() => {
+    if (model && ['connected', 'read-only'].includes(connection.phase)) plannerEntered = true;
+  });
   const liveLabel = $derived(connecting ? 'Checking dining connection' : connection.phase === 'connected' ? 'Dining connected · Refresh' : 'Check dining connection');
   let toast = $state('');
   let toastTimer: ReturnType<typeof setTimeout>;
@@ -182,7 +192,12 @@
     }
   }
 
-  function connectDining() { return connectionController.check(true); }
+  async function connectDining() {
+    const fromWelcome = !plannerEntered && Boolean(document.activeElement?.closest('.connection-screen'));
+    await connectionController.check(true);
+    await tick();
+    if (fromWelcome && plannerEntered) document.querySelector<HTMLElement>('main')?.focus({ preventScroll: true });
+  }
 
   function returnToPlanner() {
     if (document.hidden) return;
@@ -216,12 +231,20 @@
 
 <header class="app-shell">
   <div class="topbar">
-    <a class="brand" href={pageUrl('planner.html')}><img src={pageUrl('icon.svg')} width="30" height="30" alt=""><span>loghmeh <span lang="fa">لقمه</span></span></a>
+    <a class="brand" href={pageUrl('planner.html')}>
+      {#if live}<span class="brand-mark" bind:this={brandMark}><img class:arrived={plannerEntered} src={pageUrl('icon.svg')} width="30" height="30" alt=""></span>
+      {:else}<img src={pageUrl('icon.svg')} width="30" height="30" alt="">{/if}
+      <span>loghmeh <span lang="fa">لقمه</span></span>
+    </a>
     <div class="topbar-actions">
       {#if __LOGHMEH_PREVIEW__}
         <a href={pageUrl('probe.html')} aria-label="Connection probe" title="Connection probe"><Activity size={18} aria-hidden="true" /></a>
       {/if}
       {#if live}
+        <button class="live-label motion-toggle" aria-label={motionPaused ? 'Resume connection animation' : 'Pause connection animation'}
+          title={motionPaused ? 'Resume animation' : 'Pause animation'} aria-pressed={motionPaused} onclick={() => motionPaused = !motionPaused}>
+          {#if motionPaused}<Play size={15} aria-hidden="true" />{:else}<Pause size={15} aria-hidden="true" />{/if}
+        </button>
         {#if __LOGHMEH_PREVIEW__}<a href={pageUrl('planner.html?demo=1')} aria-label="Sample menus" title="Sample menus"><BookOpen size={18} aria-hidden="true" /></a>{/if}
         <button class="live-label" aria-label="Report" title="Connection report" onclick={openReport}><FileText size={18} aria-hidden="true" /></button>
         <button class="live-label" disabled={connecting} aria-label={liveLabel} title={liveLabel} onclick={connectDining}>{#if connecting}<Steam size={18} />{:else}<RefreshCw size={18} aria-hidden="true" />{/if}</button>
@@ -233,18 +256,22 @@
   </div>
 </header>
 
-{#if live && (connection.phase !== 'connected' || !connectionAcknowledged)}
-  <ConnectionPanel state={connection} compact={Boolean(model)} opening={connection.opening} logo={pageUrl('icon.svg')}
-    oncheck={connectDining} onopen={() => connectionController.openDining()} onreport={openReport}
-    onsettled={() => { if (connection.phase === 'connected') connectionAcknowledged = true; }} />
+{#if live && !plannerEntered}
+  <ConnectionPanel state={connection} opening={connection.opening} paused={motionPaused} bind:artTarget={welcomeArt}
+    oncheck={connectDining} onopen={() => connectionController.openDining()} onreport={openReport} />
 {/if}
 
-{#if model && controller}
+{#if model && controller && plannerEntered}
+  <div class="planner-workspace" use:revealPlanner={!live || motionPaused}>
   <div class="budget-header">
     <Wallet {model} {controller} {live} {revision} />
   </div>
 
-  <main class="calendar-main" aria-label="Meal calendar">
+  {#if live && !['connected', 'checking'].includes(connection.phase)}
+    <ConnectionPanel state={connection} compact opening={connection.opening}
+      oncheck={connectDining} onopen={() => connectionController.openDining()} onreport={openReport} />
+  {/if}
+  <main class="calendar-main" aria-label="Meal calendar" tabindex="-1">
     <div class="planner-warning" role="alert" hidden={!issue}>{issue ?? ''}</div>
     <div class="weeks">
       <WeekCalendar {model} {controller} {revision} week={activeWeek} today={clock.today} currentMeal={clock.currentMeal}
@@ -252,7 +279,14 @@
     </div>
     <Palette {model} {controller} {revision} week={activeWeek} onadd={() => placePicker?.open()} />
   </main>
+  </div>
   <PlacePicker bind:this={placePicker} {model} {controller} {revision} />
+{/if}
+
+{#if live}
+  <ConnectionMotion phase={connection.phase} docked={plannerEntered} paused={motionPaused}
+    welcome={welcomeArt} brand={brandMark} logo={pageUrl('icon.svg')} />
+  <span class="sr-only" role="status">{connection.phase === 'connected' ? 'Dining connected. Your planner is ready.' : connecting && plannerEntered ? 'Checking your dining session. Your planner stays available.' : ''}</span>
 {/if}
 
 {#if live}

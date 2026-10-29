@@ -79,39 +79,35 @@ function motionEnvironment(reduced = false) {
   };
 }
 
-test('checking never resolves on its own; waiting and failures settle without idle frame loops', () => {
+test('checking keeps orbiting; waiting, failed and connected drawings settle without idle frame loops', () => {
   const env = motionEnvironment();
-  let resolutions = 0;
   let orbit: SaffronOrbit;
   try {
-    orbit = new SaffronOrbit(env.canvas, env.context, 'checking', () => resolutions++);
+    orbit = new SaffronOrbit(env.canvas, env.context, 'checking');
     expect(env.frames.size).toBe(0); // Not observed in the viewport yet.
     env.intersect(true);
     env.advance(20);
     expect(env.frames.size).toBe(1);
-    expect(resolutions).toBe(0);
     for (const state of ['open', 'failed'] as const) {
       orbit.setState(state);
       env.advance(3);
       expect(env.frames.size).toBe(0);
-      expect(resolutions).toBe(0);
     }
     orbit.setState('connected');
     env.advance(5);
-    expect(resolutions).toBe(1);
     expect(env.frames.size).toBe(0);
+    const settledPaints = env.paints;
     orbit.setState('connected');
     env.advance(5);
-    expect(resolutions).toBe(1);
+    expect(env.paints).toBe(settledPaints);
   } finally { orbit?.destroy(); env.restore(); }
 });
 
 test('pause, hidden tabs and offscreen canvases freeze playback; destroying releases every resource', () => {
   const env = motionEnvironment();
-  let resolutions = 0;
   let orbit: SaffronOrbit;
   try {
-    orbit = new SaffronOrbit(env.canvas, env.context, 'connected', () => resolutions++);
+    orbit = new SaffronOrbit(env.canvas, env.context, 'connected');
     env.intersect(true); env.advance(1);
     for (const [stop, resume] of [
       [() => orbit.setPaused(true), () => orbit.setPaused(false)],
@@ -123,12 +119,11 @@ test('pause, hidden tabs and offscreen canvases freeze playback; destroying rele
       env.advance(30);
       expect(env.paints).toBe(before);
       expect(env.frames.size).toBe(0);
-      expect(resolutions).toBe(0);
       resume(); env.advance(.2);
       expect(env.frames.size).toBe(1);
     }
     env.advance(4);
-    expect(resolutions).toBe(1);
+    expect(env.frames.size).toBe(0);
     orbit.setState('checking');
     expect(env.frames.size).toBe(1);
     orbit.destroy();
@@ -165,40 +160,35 @@ test('reduced motion renders stills, responds to preference changes, and caps th
   } finally { orbit?.destroy(); env.restore(); }
 });
 
-test('reduced-motion confirmations dismiss after visible time without frames, and dispose their timer', () => {
+test('a reduced-motion connected bowl stays in place without idle frames or dismissal timers', () => {
   const env = motionEnvironment(true);
-  let resolutions = 0;
   let orbit: SaffronOrbit;
   try {
-    orbit = new SaffronOrbit(env.canvas, env.context, 'connected', () => resolutions++);
+    orbit = new SaffronOrbit(env.canvas, env.context, 'connected');
     env.intersect(true); env.advance(.5);
     env.hidden(true); env.advance(10);
-    expect(resolutions).toBe(0);
     expect(env.timers.size).toBe(0);
     env.hidden(false); env.advance(2);
-    expect(resolutions).toBe(1);
     expect(env.frames.size).toBe(0);
     orbit.setState('checking'); orbit.setState('connected');
-    expect(env.timers.size).toBe(1);
+    expect(env.timers.size).toBe(0);
     orbit.destroy();
     expect(env.timers.size).toBe(0);
     env.advance(10);
-    expect(resolutions).toBe(1);
   } finally { orbit?.destroy(); env.restore(); }
 });
 
-test('a connection result received while paused renders its still and resolves only after resuming', () => {
+test('a connection result received while paused renders its still and stays settled on resume', () => {
   const env = motionEnvironment();
-  let resolutions = 0;
   let orbit: SaffronOrbit;
   try {
-    orbit = new SaffronOrbit(env.canvas, env.context, 'checking', () => resolutions++);
+    orbit = new SaffronOrbit(env.canvas, env.context, 'checking');
     env.intersect(true); orbit.setPaused(true);
+    const before = env.paints;
     orbit.setState('connected'); env.advance(10);
-    expect(resolutions).toBe(0);
+    expect(env.paints).toBeGreaterThan(before);
     expect(env.frames.size).toBe(0);
     orbit.setPaused(false);
-    expect(resolutions).toBe(1);
     expect(env.frames.size).toBe(0);
   } finally { orbit?.destroy(); env.restore(); }
 });

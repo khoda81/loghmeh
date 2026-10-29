@@ -81,21 +81,6 @@ const E = {
 };
 function rng(a: number) { return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
 const COL = { paper: '#f7f5ee', ink: '#263a2e', forest: '#315b46', copper: '#aa7848', sage: '#dfe3d9' };
-let grainTex: HTMLCanvasElement | null = null;
-function grain() {
-  if (grainTex)
-    return grainTex;
-  const c = document.createElement('canvas');
-  c.width = c.height = 180;
-  const g = c.getContext('2d')!, r = rng(19);
-  for (let i = 0; i < 1600; i++) {
-    const a = (r() * .06).toFixed(3);
-    g.fillStyle = r() < .7 ? `rgba(38,58,46,${a})` : `rgba(170,120,72,${a})`;
-    const s = r() < .85 ? 1 : 1.6;
-    g.fillRect(r() * 180, r() * 180, s, s);
-  }
-  return grainTex = c;
-}
 export class SaffronOrbit {
   private readonly gs = 1.85;
   private cx = 300;
@@ -120,18 +105,15 @@ export class SaffronOrbit {
   private reduced: boolean;
   private visible = false;
   private destroyed = false;
-  private settled = false;
   private raf = 0;
   private last = 0;
   private W = 0;
   private H = 0;
   private dpr = 1;
-  private pattern: CanvasPattern | null = null;
   private readonly preference = window.matchMedia('(prefers-reduced-motion: reduce)');
   private readonly resizeObserver: ResizeObserver;
   private readonly intersectionObserver: IntersectionObserver;
-  private stillTimer: ReturnType<typeof setTimeout> | undefined;
-  constructor(private readonly canvas: HTMLCanvasElement, private readonly ctx: CanvasRenderingContext2D, state: ConnectionMotionState, private readonly onsettled: () => void = () => { }) {
+  constructor(private readonly canvas: HTMLCanvasElement, private readonly ctx: CanvasRenderingContext2D, state: ConnectionMotionState) {
     this.state = state;
     this.reduced = this.preference.matches;
     this.init();
@@ -155,7 +137,6 @@ export class SaffronOrbit {
       return;
     this.capture(state, false);
     this.state = state;
-    this.settled = false;
     this.t = this.reduced || this.paused ? this.staticTime() : 0;
     this.update();
     this.draw();
@@ -185,7 +166,6 @@ export class SaffronOrbit {
       if (w && h) {
         this.canvas.width = Math.round(w * d);
         this.canvas.height = Math.round(h * d);
-        this.pattern = null;
         this.draw();
       }
     }
@@ -199,12 +179,6 @@ export class SaffronOrbit {
   }
   private get running() { return this.active && !this.reduced && this.t < this.endTime; }
   private kick = () => {
-    clearTimeout(this.stillTimer);
-    if (this.active && !this.reduced && this.t >= this.endTime) this.resolve();
-    // A reduced-motion success still stays visible briefly without running a frame loop.
-    if (this.active && this.reduced && this.state === 'connected' && !this.settled) {
-      this.stillTimer = setTimeout(() => this.resolve(), 1800);
-    }
     if (this.running) {
       if (!this.raf) {
         this.last = performance.now();
@@ -227,24 +201,14 @@ export class SaffronOrbit {
     this.T += dt;
     this.update();
     this.draw();
-    if (this.t >= this.endTime)
-      this.resolve();
     if (this.running)
       this.raf = requestAnimationFrame(this.tick);
   };
-  private resolve() {
-    if (this.destroyed || this.settled)
-      return;
-    this.settled = true;
-    if (this.state === 'connected')
-      this.onsettled();
-  }
   destroy() {
     if (this.destroyed) return;
     this.destroyed = true;
     if (this.raf)
       cancelAnimationFrame(this.raf);
-    clearTimeout(this.stillTimer);
     this.resizeObserver.disconnect();
     this.intersectionObserver.disconnect();
     this.preference.removeEventListener('change', this.changePreference);
@@ -255,14 +219,7 @@ export class SaffronOrbit {
     ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
     ctx.globalAlpha = 1;
     ctx.setLineDash([]);
-    ctx.fillStyle = COL.paper;
-    ctx.fillRect(0, 0, W, H);
-    if (!this.pattern)
-      this.pattern = ctx.createPattern(grain(), 'repeat');
-    if (this.pattern) {
-      ctx.fillStyle = this.pattern;
-      ctx.fillRect(0, 0, W, H);
-    }
+    ctx.clearRect(0, 0, W, H);
     const k = Math.min(W / 600, H / 450);
     ctx.translate((W - 600 * k) / 2, (H - 450 * k) / 2);
     ctx.scale(k, k);

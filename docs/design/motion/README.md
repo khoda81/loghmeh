@@ -1,13 +1,16 @@
 # Claude motion studies
 
 This gallery is the standalone design exploration. Saffron Orbit is now also
-adapted into the extension's connection card in
+adapted into the extension's welcome screen and persistent header mark in
 [`src/lib/saffron-orbit.ts`](../../../src/lib/saffron-orbit.ts) and
 [`ConnectionMotion.svelte`](../../../src/planner/ConnectionMotion.svelte).
 The production version follows real connection states, stops waiting/failure
 loops after settling, respects visibility and reduced motion, and disposes its
-observers, frames and timers on unmount. Its short success confirmation leaves
-the planner usable. The other two concepts remain studies.
+observers and frames on unmount. The same canvas travels from the welcome card
+to the header while the calendar appears, coordinated by
+[`connection-handoff.ts`](../../../src/lib/connection-handoff.ts). The calendar
+is immediately usable; animation completion never gates it. The other two
+concepts remain studies.
 
 The requested model is `claude-opus-5-5` with effort `high`. The brief requests
 three interactive motion concepts and makes clear that authentication states
